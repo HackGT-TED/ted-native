@@ -1,140 +1,376 @@
-import { useState } from "react";
-import { router } from "expo-router";
+import { useCallback, useEffect, useRef } from "react";
+import { router, useFocusEffect } from "expo-router";
 import {
-  KeyboardAvoidingView,
+  ActivityIndicator,
+  Keyboard,
+  Linking,
   Platform,
   Pressable,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { Shell } from "../components/shell";
-import { Body, Button, colors, Heading } from "../components/ui";
+import { Body, Button, colors, Heading, Icon } from "../components/ui";
+import { RecordingTimelineItem } from "../components/recording/recording-timeline-item";
+import { DraggableRecordingList } from "../components/recording/draggable-recording-list";
+import { useSegmentDrag } from "../hooks/use-segment-drag";
+import { StoryNameForm } from "../components/story-name-form";
 import { useStudio } from "../context/studio";
+import { useTimelinePlayback } from "../hooks/use-timeline-playback";
+import {
+  formatDuration,
+  formatRecordingDay,
+  recordingDayKey,
+} from "../utils/recordings";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import type { FlatList } from "react-native-gesture-handler";
+import type { RecordingSegment } from "../types/recording";
 
 export default function Create() {
-  const { name, session, authLoading, addCreation } = useStudio();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Stories");
-  const [error, setError] = useState("");
-  const [created, setCreated] = useState("");
-  function publish() {
-    if (!title.trim() || !description.trim()) {
-      setError("Add a title and description.");
-      return;
-    }
-    if (authLoading) return;
-    if (!session) {
-      router.push("/auth");
-      return;
-    }
-    const id = `creation-${Date.now()}`;
-    addCreation({
-      id,
-      title: title.trim(),
-      subtitle: description.trim(),
-      category,
-      color: colors.cream,
-      author: name,
-    });
-    setError("");
-    setCreated(id);
-  }
+  const { timeline, session, recorder } = useStudio();
+  const audio = useTimelinePlayback();
+  const { refresh, ready } = timeline;
+  const { start, finish, phase, duration, error, permissionBlocked } = recorder;
+  const list = useRef<FlatList<RecordingSegment>>(null);
+  const scrollToLatest = useRef(false);
+  const previousLastId = useRef<string | undefined>(undefined);
+  const holding = useRef(false);
+  const capturing = phase === "starting" || phase === "recording";
+  const finalizing = phase === "stopping" || phase === "saving";
+  const fade = useSharedValue(1);
+  useEffect(() => {
+    fade.value = withTiming(capturing ? 0.18 : 1, { duration: 180 });
+  }, [capturing, fade]);
+  const timelineStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  const { stop } = audio;
+  const dragState = useSegmentDrag(timeline.segments, session?.user.id ?? null,
+    ready && phase === "idle", timeline.move, stop);
+  const unavailable = !ready || finalizing || phase === "error" || dragState.dragging;
+  const begin = useCallback(() => {
+    if (holding.current || dragState.dragging || !ready || phase !== "idle") return;
+    holding.current = true;
+    scrollToLatest.current = true;
+    previousLastId.current = timeline.segments.at(-1)?.id;
+    Keyboard.dismiss();
+    stop();
+    void start();
+  }, [dragState.dragging, phase, ready, start, stop, timeline.segments]);
+  const release = useCallback(() => {
+    if (!holding.current) return;
+    holding.current = false;
+    void finish();
+  }, [finish]);
+  // Navigation, OS interruptions, and touch cancellation all finalize the take.
+  useFocusEffect(useCallback(() => release, [release]));
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    window.addEventListener("blur", release);
+    return () => window.removeEventListener("blur", release);
+  }, [release]);
+  useFocusEffect(
+    useCallback(() => {
+      if (ready) void refresh();
+    }, [ready, refresh]),
+  );
+  const { toggle } = audio;
+  const play = useCallback(
+    (segment: RecordingSegment) => {
+      void toggle(segment);
+    },
+    [toggle],
+  );
+
+  const { remove } = timeline;
+  const deleteSegment = useCallback((id: string) => {
+    if (audio.activeId === id) stop();
+    remove(id);
+  }, [audio.activeId, remove, stop]);
+
   return (
-    <Shell>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="w-full max-w-[480px] self-center pt-9"
+    <Shell scroll={false} quiet={capturing}>
+      <Animated.View
+        className="flex-1"
+        style={timelineStyle}
+        pointerEvents={capturing ? "none" : "auto"}
+        accessibilityElementsHidden={capturing}
+        importantForAccessibility={capturing ? "no-hide-descendants" : "auto"}
       >
-        <Heading>{created ? "Shared." : "Create"}</Heading>
-        <Body className="mt-2">
-          {created
-            ? "Your creation is now in Explore."
-            : "Share a little of your world with the community."}
-        </Body>
-        {created ? (
-          <View className="mt-9 gap-3">
-            <Button
-              title="View creation"
-              onPress={() =>
-                router.push({ pathname: "/item/[id]", params: { id: created } })
-              }
-            />
-            <Button
-              title="Create another"
-              secondary
-              onPress={() => {
-                setCreated("");
-                setTitle("");
-                setDescription("");
-              }}
-            />
-          </View>
-        ) : (
-          <>
-            <Text className="mb-2.5 mt-6 text-[13px] text-ink">Category</Text>
-            <View className="flex-row gap-2.5">
-              {["Stories", "Journals", "Art"].map((item) => (
-                <Pressable
-                  key={item}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: category === item }}
-                  onPress={() => setCategory(item)}
-                  className={`min-h-11 flex-1 items-center justify-center rounded-lg border ${category === item ? "border-ink bg-ink" : "border-line"}`}
-                >
+        <DraggableRecordingList
+          key={`${session?.user.id ?? "guest"}:${dragState.generation}`}
+          onDragBegin={dragState.onDragBegin}
+          onDragEnd={dragState.onDragEnd}
+          autoscrollThreshold={64}
+          autoscrollSpeed={140}
+          activationDistance={8}
+          ref={list}
+          onContentSizeChange={() => {
+            if (
+              scrollToLatest.current &&
+              timeline.segments.at(-1)?.id !== previousLastId.current
+            ) {
+              list.current?.scrollToEnd({ animated: true });
+              scrollToLatest.current = false;
+            }
+          }}
+          className="w-full max-w-[480px] flex-1 self-center"
+          contentContainerClassName="pb-3 pt-6"
+          data={dragState.data}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          refreshing={!dragState.dragging && timeline.loading}
+          onRefresh={dragState.dragging ? undefined : () => {
+            void refresh();
+          }}
+          ListHeaderComponent={
+            <View className="mb-7">
+              <Heading>Create</Heading>
+              <StoryNameForm disabled={phase !== "idle"} />
+              <Body className="mt-2">Your story, one moment at a time.</Body>
+              <Body className="mt-1 !text-[12px]">
+                Hold to record. Release to add to your story.
+              </Body>
+              {timeline.segments.length > 1 && <Body className="mt-1 !text-[11px]">Hold the handle on a moment to rearrange your story.</Body>}
+              {timeline.loading && (
+                <ActivityIndicator className="mt-4" color={colors.cocoa} />
+              )}
+              {timeline.error && (
+                <View className="mt-4 gap-2">
                   <Text
-                    className={`text-[13px] ${category === item ? "text-paper" : "text-muted"}`}
+                    accessibilityRole="alert"
+                    className="text-[13px] text-rust"
                   >
-                    {item}
+                    {timeline.error}
                   </Text>
-                </Pressable>
-              ))}
+                  <Button
+                    title="Retry sync"
+                    secondary
+                    onPress={() => {
+                      void refresh();
+                    }}
+                  />
+                </View>
+              )}
+              {timeline.deletionSyncError && (
+                <View className="mt-4 gap-2">
+                  <Text accessibilityRole="alert" className="text-[13px] text-rust">
+                    A segment was removed here, but the deletion could not sync yet.
+                  </Text>
+                  <Button title="Retry syncing deletions" secondary onPress={timeline.retryDeletions} />
+                </View>
+              )}
+              {timeline.diskError && (
+                <View className="mt-4 gap-2">
+                  <Text
+                    accessibilityRole="alert"
+                    className="text-[13px] text-rust"
+                  >
+                    {timeline.diskError}
+                  </Text>
+                  <Button
+                    title="Retry device storage"
+                    secondary
+                    onPress={timeline.retryLocalSave}
+                  />
+                </View>
+              )}
+              {!session && timeline.segments.length > 0 && (
+                <Button
+                  className="mt-4"
+                  title="Sign in to save to your account"
+                  secondary
+                  onPress={() => router.push("/auth")}
+                />
+              )}
+              {timeline.guestCount > 0 && (
+                <Button
+                  className="mt-4"
+                  title={`Add ${timeline.guestCount} device recording${timeline.guestCount === 1 ? "" : "s"} to my draft`}
+                  secondary
+                  onPress={timeline.claimGuestRecordings}
+                />
+              )}
             </View>
-            <Text className="mb-2.5 mt-6 text-[13px] text-ink">Title</Text>
-            <TextInput
-              accessibilityLabel="Creation title"
-              value={title}
-              onChangeText={setTitle}
-              maxLength={65}
-              placeholder="Give it a name"
-              placeholderTextColor={colors.muted}
-              className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] text-ink"
-            />
-            <Text className="mb-2.5 mt-6 text-[13px] text-ink">Description</Text>
-            <TextInput
-              accessibilityLabel="Creation description"
-              value={description}
-              onChangeText={setDescription}
-              maxLength={160}
-              multiline
-              placeholder="A few words about your creation"
-              placeholderTextColor={colors.muted}
-              className="min-h-[130px] rounded-[10px] border border-line bg-paper px-4 py-4 text-[15px] text-ink align-top"
-            />
-            {error ? (
-              <Text accessibilityRole="alert" className="my-3 text-[13px] leading-5 text-rust">
-                {error}
+          }
+          ListEmptyComponent={
+            !timeline.loading ? (
+              <View className="rounded-[20px] border border-line bg-cream px-6 py-9">
+                <Text className="text-[19px] font-medium text-ink">
+                  A story starts with a moment.
+                </Text>
+                <Body className="mt-3">
+                  A memory, a little adventure, a familiar voice. Hold the
+                  microphone below to add your first moment.
+                </Body>
+              </View>
+            ) : null
+          }
+          renderItem={({ item, getIndex, drag, isActive }) => {
+            const index = getIndex() ?? 0;
+            const active = audio.activeId === item.id;
+            const duration =
+              active && audio.durationMs > 0
+                ? audio.durationMs
+                : item.durationMs;
+            return (
+              <View>
+                {(index === 0 ||
+                  recordingDayKey(item.createdAt) !==
+                    recordingDayKey(
+                      dragState.data[index - 1]?.createdAt ?? item.createdAt,
+                    )) && (
+                  <Text className="mb-3 mt-2 text-[11px] text-muted">
+                    {formatRecordingDay(item.createdAt)}
+                  </Text>
+                )}
+                <RecordingTimelineItem
+                  recording={item}
+                  disabled={recorder.phase !== "idle" || dragState.dragging}
+                  playing={active && audio.playing}
+                  loading={active && audio.loading}
+                  progress={
+                    active
+                      ? Math.min(1, Math.max(0, audio.positionMs / duration))
+                      : 0
+                  }
+                  playbackError={active ? audio.error : undefined}
+                  onPlay={play}
+                  onRetry={timeline.retry}
+                  onRename={timeline.rename}
+                  onDelete={deleteSegment}
+                  drag={drag}
+                  isDragging={isActive}
+                  position={index + 1}
+                  total={dragState.data.length}
+                  onMoveEarlier={() => { if (index > 0) timeline.move(item.id, dragState.data[index - 1].id); }}
+                  onMoveLater={() => { if (index + 1 < dragState.data.length) timeline.move(item.id, dragState.data[index + 2]?.id ?? null); }}
+                />
+              </View>
+            );
+          }}
+          ListFooterComponent={
+            <View>
+              {timeline.segments.length > 0 && (
+                <Text className="mb-3 ml-8 text-[12px] text-muted">
+                  {timeline.segments.length}{" "}
+                  {timeline.segments.length === 1 ? "moment" : "moments"} ·{" "}
+                  {formatDuration(
+                    timeline.segments.reduce(
+                      (total, segment) => total + segment.durationMs,
+                      0,
+                    ),
+                  )}{" "}
+                  in your draft
+                </Text>
+              )}
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push("/share")}
+                className="min-h-11 justify-center self-center px-3"
+              >
+                <Text className="text-[12px] text-muted">
+                  Share a written creation
+                </Text>
+              </Pressable>
+            </View>
+          }
+        />
+      </Animated.View>
+      <View className="w-full max-w-[480px] self-center border-t border-line py-4">
+        <View className="flex-row items-center gap-5">
+          {/* Keep this control mounted and enabled throughout the hold. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Hold to record a story moment"
+            accessibilityHint="Press and hold while speaking. Release to add the recording to your timeline."
+            accessibilityState={{ disabled: unavailable, busy: finalizing }}
+            disabled={unavailable}
+            onPressIn={begin}
+            onPressOut={release}
+            // Touch end bypasses Pressable's minimum visual press duration.
+            onTouchEnd={release}
+            onTouchCancel={release}
+            className={`h-24 w-24 items-center justify-center rounded-full border-[6px] ${capturing ? "border-line bg-rust" : "border-cream bg-cocoa"} ${unavailable ? "opacity-50" : ""}`}
+          >
+            {finalizing ? (
+              <ActivityIndicator color={colors.paper} />
+            ) : (
+              <Icon name="mic" size={34} color={colors.paper} />
+            )}
+          </Pressable>
+          <View className="min-h-[100px] flex-1 justify-center">
+            <View className="flex-row items-center gap-2">
+              {phase === "recording" && (
+                <View className="h-2 w-2 rounded-full bg-rust" />
+              )}
+              <Text
+                className="text-[15px] font-medium text-ink"
+                accessibilityLiveRegion="polite"
+              >
+                {phase === "recording"
+                  ? "Recording"
+                  : phase === "starting"
+                    ? "Opening microphone…"
+                    : finalizing
+                      ? "Adding your moment…"
+                      : phase === "error"
+                        ? "Let’s keep this moment"
+                        : "Hold to record"}
+              </Text>
+            </View>
+            {capturing || finalizing ? (
+              <Text
+                className="mt-1 text-[36px] font-light text-ink"
+                style={{ fontVariant: ["tabular-nums"] }}
+              >
+                {formatDuration(duration)}
               </Text>
             ) : null}
-            <Button
-              title={
-                authLoading
-                  ? "Restoring session…"
-                  : session
-                    ? "Share with community"
-                    : "Sign in to share"
-              }
-              disabled={authLoading}
-              onPress={publish}
-              className="mt-7"
-            />
-            <Body className="mt-4 text-center !text-[11px]">
-              Shared creations are available for this demo session.
-            </Body>
-          </>
+            <Text className="mt-1 text-[12px] leading-[18px] text-muted">
+              {capturing
+                ? "Release to add to your story"
+                : finalizing
+                  ? "Finding its place in your timeline"
+                  : !ready
+                    ? "Opening your timeline…"
+                    : "Each release adds a new moment."}
+            </Text>
+          </View>
+        </View>
+        {error && (
+          <Text
+            accessibilityRole="alert"
+            className="mt-3 text-[12px] leading-[18px] text-rust"
+          >
+            {error}
+          </Text>
         )}
-      </KeyboardAvoidingView>
+        {phase === "error" && (
+          <Button
+            title="Retry finishing this moment"
+            secondary
+            className="mt-3"
+            onPress={() => {
+              void finish();
+            }}
+          />
+        )}
+        {permissionBlocked && Platform.OS !== "web" && (
+          <Button
+            title="Open microphone settings"
+            secondary
+            className="mt-3"
+            onPress={() => {
+              void Linking.openSettings();
+            }}
+          />
+        )}
+      </View>
     </Shell>
   );
 }

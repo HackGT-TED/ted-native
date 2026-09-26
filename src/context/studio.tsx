@@ -1,6 +1,9 @@
 import { createContext, ReactNode, useContext, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { useAuthSession } from '../hooks/use-auth-session';
+import { useRecordingSegments } from '../hooks/use-recording-segments';
+import { useAudioCapture } from '../hooks/use-audio-capture';
+import { useStoryDraft } from '../hooks/use-story-draft';
 export type Creation = {
   id: string;
   title: string;
@@ -40,10 +43,10 @@ export const originals: Creation[] = [{
   color: '#E7CBBB',
   subtitle: 'Stories for taking your time'
 }];
-export type Recording = { uri: string; title: string; duration: number };
 type Studio = {
-  recording: Recording | null;
-  setRecording: (recording: Recording | null) => void;
+  draft: ReturnType<typeof useStoryDraft>;
+  timeline: ReturnType<typeof useRecordingSegments>;
+  recorder: ReturnType<typeof useAudioCapture>;
   name: string;
   session: Session | null;
   authLoading: boolean;
@@ -62,12 +65,15 @@ export function StudioProvider({
   const { session, authLoading, authError } = useAuthSession();
   const displayName = session?.user.user_metadata.display_name;
   const name = session ? (typeof displayName === 'string' && displayName.trim() ? displayName.trim() : session.user.email?.split('@')[0] || 'Member') : '';
-  const [recording, setRecording] = useState<Recording | null>(null);
+  const timeline = useRecordingSegments(session?.user.id ?? null, authLoading);
+  const draft = useStoryDraft(session?.user.id ?? null, authLoading);
+  const recorder = useAudioCapture(timeline.addRecording);
   const [creations, setCreations] = useState(originals);
   const [saved, setSaved] = useState<string[]>([]);
   return <Context.Provider value={{
-    recording,
-    setRecording,
+    draft,
+    timeline,
+    recorder,
     name,
     session,
     authLoading,
