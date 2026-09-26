@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { cssInterop } from 'nativewind';
 import { ActivityIndicator, Animated, BackHandler, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Text, useAnimatedValue, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, colors, Heading, Icon } from '../components/ui';
+import { Body, colors, Heading } from '../components/ui';
 import Auth from '../components/Auth';
 import Account from '../components/Account';
 import { supabase } from '../lib/supabase';
@@ -77,10 +77,9 @@ export default function AuthScreen() {
     <AnimatedKeyboardAvoidingView className="h-[65%] w-full overflow-hidden rounded-t-3xl bg-paper" style={{ transform: [{ translateY: Animated.add(progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }), dragY) }] }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView className="flex-1" edges={['bottom', 'left', 'right']}>
         <View {...panResponder.panHandlers} className="px-6 pb-2 pt-3" style={Platform.OS === 'web' ? { touchAction: 'none' } : undefined}>
-          <View className="mb-2 h-1 w-10 self-center rounded-full bg-line" />
-          <View className="w-full max-w-[400px] flex-row items-center gap-3 self-center">
+          <View className="mb-6 h-1 w-10 self-center rounded-full bg-line" />
+          <View className="min-h-11 w-full max-w-[400px] flex-row items-center self-center">
             <Heading className="flex-1">{session ? 'Account' : 'Sign in'}</Heading>
-            <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close" className="h-11 w-11 items-center justify-center"><Icon name="close" /></Pressable>
           </View>
         </View>
         <ScrollView className="flex-1" contentContainerClassName="grow px-6 pb-4" keyboardShouldPersistTaps="handled">

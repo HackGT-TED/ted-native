@@ -15,7 +15,7 @@ function newProjectId() {
 }
 
 export default function Welcome() {
-  const { timeline, recorder, openStory } = useStudio();
+  const { timeline, recorder, openStory, name } = useStudio();
   const opening = useRef(false);
   useFocusEffect(useCallback(() => { opening.current = false; }, []));
   const unavailable = !timeline.ready || recorder.phase !== 'idle';
@@ -29,7 +29,7 @@ export default function Welcome() {
   return (
     <Shell>
       <View className="w-full max-w-[480px] self-center items-center pb-8 pt-12">
-        <Label>WELCOME TO TEDTIME</Label>
+        <Label>{name ? `Welcome, ${name}` : 'Welcome to TedTime'}</Label>
         <Text accessibilityRole="header" className="mt-5 text-center font-heading text-[46px] font-normal leading-[54px] tracking-[-1.4px] text-ink">
           Every story starts{'\n'}with your voice.
         </Text>
