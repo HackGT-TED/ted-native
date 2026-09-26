@@ -14,20 +14,40 @@ function deferred() {
 }
 
 // Native method calls and property reads throw once Expo releases the player.
-function makePlayer(seek) {
+function makePlayer(options) {
   let released = false;
   let playing = false;
+  let position = options.currentTime ?? 10;
+  const listeners = new Set();
   const calls = [];
   function live() { assert.equal(released, false, 'Native shared object has been released'); }
   return {
     calls,
+    addListener(event, listener) {
+      assert.equal(event, 'playbackStatusUpdate');
+      listeners.add(listener);
+      return { remove() { listeners.delete(listener); } };
+    },
+    emit(status) {
+      if ('playing' in status) playing = status.playing;
+      if ('currentTime' in status) position = status.currentTime;
+      for (const listener of listeners) listener(status);
+    },
     release() { released = true; calls.push('release'); },
     get playing() { live(); return playing; },
-    get currentTime() { live(); return 10; },
-    get duration() { live(); return 10; },
+    get currentTime() { live(); return position; },
+    get duration() { live(); return options.duration ?? 10; },
     pause() { live(); playing = false; calls.push('pause'); },
     play() { live(); playing = true; calls.push('play'); },
-    async seekTo() { live(); calls.push('seek'); await seek; },
+    async seekTo(seconds, before, after) {
+      live();
+      calls.push('seek');
+      assert.equal(seconds, 0);
+      assert.equal(before, 0, 'Replay must seek exactly to the start on iOS');
+      assert.equal(after, 0, 'Replay must seek exactly to the start on iOS');
+      await options.seek;
+      position = seconds;
+    },
   };
 }
 function setup(options = {}) {
@@ -40,7 +60,7 @@ function setup(options = {}) {
   let pendingEffect;
   let uri = 'file:///first.m4a';
   let focused = true;
-  let player = makePlayer(options.seek);
+  let player = makePlayer(options);
   const players = [player];
   const modules = {
     react: {
@@ -59,8 +79,11 @@ function setup(options = {}) {
     },
     'expo-router': { useIsFocused: () => focused },
     'expo-audio': {
-      useAudioPlayer: () => player,
-      useAudioPlayerStatus: () => ({ playing: player.playing }),
+      useAudioPlayer: (uri, config) => {
+        assert.equal(config.keepAudioSessionActive, true, 'Do not queue iOS session deactivation between plays');
+        return player;
+      },
+      useAudioPlayerStatus: () => ({ playing: player.playing, ...options.status }),
       setAudioModeAsync: async () => { await options.mode; },
     },
   };
@@ -75,7 +98,7 @@ function setup(options = {}) {
       if ('uri' in next && next.uri !== uri) {
         // Exercise the dangerous ordering: disposal before consumer cleanup.
         player.release();
-        player = makePlayer(options.seek);
+        player = makePlayer(options);
         players.push(player);
         uri = next.uri;
       }
@@ -161,5 +184,84 @@ test('playback resumes after focus returns and rewinds completed audio', async (
   await h.result.toggle();
   await h.result.toggle();
   assert.deepEqual(h.players[0].calls, ['pause', 'seek', 'play', 'pause']);
+  h.unmount();
+});
+
+test('unknown duration starts playback without waiting for a premature seek', async () => {
+  const h = setup({ duration: 0, currentTime: 0 });
+  await h.result.toggle();
+  assert.deepEqual(h.players[0].calls, ['play']);
+  h.unmount();
+});
+
+test('pausing a recording with missing duration metadata preserves its position', async () => {
+  const h = setup({ duration: 0, currentTime: 3 });
+  await h.result.toggle();
+  await h.result.toggle();
+  await h.result.toggle();
+  assert.deepEqual(h.players[0].calls, ['play', 'pause', 'play']);
+  h.unmount();
+});
+
+test('completed audio with missing duration metadata still rewinds', async () => {
+  const h = setup({ duration: 0, currentTime: 3 });
+  h.players[0].emit({ didJustFinish: true, playing: false });
+  await h.result.toggle();
+  assert.deepEqual(h.players[0].calls, ['seek', 'play']);
+  h.unmount();
+});
+
+test('repeated playback rewinds even after the transient finish flag is cleared', async () => {
+  const status = { didJustFinish: false };
+  const h = setup({ currentTime: 0, duration: 10, status });
+  const player = h.players[0];
+  await h.result.toggle();
+  for (let replay = 0; replay < 3; replay++) {
+    // A native end event can precede a periodic update and React's next render.
+    // The reported position can also be just short of the duration.
+    player.emit({ didJustFinish: true, currentTime: 9.99, playing: false });
+    player.emit({ didJustFinish: false });
+    h.render();
+    await h.result.toggle();
+    assert.equal(player.currentTime, 0);
+    assert.equal(player.playing, true);
+  }
+  assert.deepEqual(player.calls, ['play', 'seek', 'play', 'seek', 'play', 'seek', 'play']);
+  h.unmount();
+});
+
+test('resume after a replay preserves position instead of rewinding again', async () => {
+  const h = setup({ currentTime: 0, duration: 10 });
+  const player = h.players[0];
+  player.emit({ didJustFinish: true, playing: false });
+  await h.result.toggle();
+  player.emit({ currentTime: 4, didJustFinish: false });
+  await h.result.toggle();
+  await h.result.toggle();
+  assert.equal(player.currentTime, 4);
+  assert.deepEqual(player.calls, ['seek', 'play', 'pause', 'play']);
+  h.unmount();
+});
+
+test('completion survives leaving and returning to the same player', async () => {
+  const h = setup({ duration: 0, currentTime: 3 });
+  const player = h.players[0];
+  player.emit({ didJustFinish: true, playing: false });
+  h.render({ focused: false });
+  h.render({ focused: true });
+  await h.result.toggle();
+  assert.deepEqual(player.calls, ['pause', 'seek', 'play']);
+  assert.equal(player.currentTime, 0);
+  h.unmount();
+});
+
+test('asynchronous loading errors are surfaced without a play() exception', () => {
+  const status = { error: null };
+  const h = setup({ status });
+  status.error = 'The audio file could not be opened';
+  assert.match(h.render().error, /The audio file could not be opened/);
+  status.error = null;
+  h.render({ uri: 'file:///valid.m4a' });
+  assert.equal(h.result.error, '');
   h.unmount();
 });

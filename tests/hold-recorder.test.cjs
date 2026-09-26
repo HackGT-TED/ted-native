@@ -18,9 +18,19 @@ function setup(options = {}) {
   const states = [];
   let blur;
   let background;
+  let fileId = 0;
+  const preset = { extension: '.m4a', sampleRate: 44100 };
   const recorder = {
     uri: 'file:///test.m4a',
-    prepareToRecordAsync: async () => { calls.push('prepare'); await options.prepare; },
+    prepareToRecordAsync: async settings => {
+      calls.push('prepare');
+      await options.prepare;
+      // SDK 57's iOS recorder allocates a new file only when options are passed.
+      if (settings) {
+        assert.deepEqual(settings, preset);
+        recorder.uri = `file:///take-${++fileId}.m4a`;
+      }
+    },
     record: () => { calls.push('record'); if (options.recordError) throw new Error('Unavailable'); },
     stop: async () => { calls.push('stop'); await options.stop; if (options.stopError) throw new Error('Stop failed'); },
   };
@@ -42,7 +52,7 @@ function setup(options = {}) {
       useAudioRecorder: () => recorder,
       useAudioRecorderState: () => ({ durationMillis: 0 }),
       AudioModule: { requestRecordingPermissionsAsync: async () => options.permission ? await options.permission : { granted: true } },
-      RecordingPresets: { HIGH_QUALITY: {} },
+      RecordingPresets: { HIGH_QUALITY: preset },
       setAudioModeAsync: async mode => { calls.push(mode.allowsRecording ? 'mode-record' : 'mode-play'); },
     },
   };
@@ -65,6 +75,16 @@ test('holding records; releasing saves exactly one take', async () => {
   assert.equal(h.takes.length, 1);
   assert.equal(h.takes[0].title, 'My note');
   assert.equal(h.states[0], 'idle');
+});
+
+test('successive takes have distinct files so playback reloads the new audio', async () => {
+  const h = setup();
+  await h.hook.start('First');
+  await h.hook.finish();
+  await h.hook.start('Second');
+  await h.hook.finish();
+  assert.equal(h.takes.length, 2);
+  assert.notEqual(h.takes[0].uri, h.takes[1].uri);
 });
 
 test('release during permission prompt never starts the microphone', async () => {

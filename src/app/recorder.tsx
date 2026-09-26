@@ -196,6 +196,11 @@ export default function Recorder() {
                   <Text className="text-[11px] text-muted">
                     Last take · {time(recording.duration)}
                   </Text>
+                  <Text className="text-[11px] text-muted">
+                    {playback.isBuffering
+                      ? "Loading audio…"
+                      : `${playback.playing ? "Playing" : "Playback"} · ${time(playback.currentTime * 1000)} / ${time(playback.duration > 0 ? playback.duration * 1000 : recording.duration)}`}
+                  </Text>
                 </View>
                 <Pressable
                   accessibilityRole="button"

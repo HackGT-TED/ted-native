@@ -72,7 +72,9 @@ export function useHoldRecorder(onComplete: (recording: Recording) => void) {
         await setAudioModeAsync({ allowsRecording: false });
         return;
       }
-      await recorder.prepareToRecordAsync();
+      // Passing options creates a fresh native file for each take on iOS.
+      // Reusing the URL would leave the playback hook holding the previous asset.
+      await recorder.prepareToRecordAsync(RecordingPresets.HIGH_QUALITY);
       if (!held.current || !focused.current) {
         // Web MediaRecorder must be started before stop can release its microphone stream.
         if (Platform.OS === 'web') recorder.record();
