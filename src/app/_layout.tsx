@@ -5,12 +5,13 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { StudioProvider } from '../context/studio';
 import { colors } from '../components/ui';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     Icons: require('../../assets/fonts/Icons.ttf')
   });
   if (!loaded && !error) return <View className="flex-1 items-center justify-center bg-paper"><ActivityIndicator color={colors.cocoa} /></View>;
-  return <StudioProvider><StatusBar style="dark" /><Stack screenOptions={{
+  return <GestureHandlerRootView><StudioProvider><StatusBar style="dark" /><Stack screenOptions={{
       headerShown: false,
       animation: 'none',
       contentStyle: {
@@ -21,5 +22,5 @@ export default function RootLayout() {
         animation: 'none',
         gestureEnabled: false,
         contentStyle: { backgroundColor: 'transparent' }
-      }} /></Stack></StudioProvider>;
+      }} /></Stack></StudioProvider></GestureHandlerRootView>;
 }

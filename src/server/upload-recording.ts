@@ -161,21 +161,38 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const durationMs = Number(duration);
-    const path = `${auth.user.id}/${crypto.randomUUID()}.${extension}`;
+    const id = form.get('id') ?? crypto.randomUUID();
+    const recordedAt = form.get('recordedAt') ?? new Date().toISOString();
+    const position = form.get('position') ?? String(Date.now());
+    if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{8,80}$/.test(id)
+      || typeof recordedAt !== 'string' || !Number.isFinite(Date.parse(recordedAt))
+      || typeof position !== 'string' || !/^\d+$/.test(position) || !Number.isSafeInteger(Number(position))) {
+      return error('Invalid recording identity, timestamp, or position.', 400);
+    }
+    const path = `${auth.user.id}/${id}.${extension}`;
     const { data, error: storageError } = await supabase.storage
       .from(BUCKET)
       .upload(path, await audio.arrayBuffer(), {
         contentType,
         upsert: false,
-        metadata: { title: title.trim(), durationMs },
+        metadata: { title: title.trim(), durationMs, recordedAt, position: Number(position), segmentId: id },
       });
-    if (storageError || !data) return storageFailure(storageError);
+    // Immutable deterministic paths make retries safe after a lost response or
+    // metadata failure. Never replace the original audio on a retry.
+    const duplicate = storageError && (storageError.statusCode === '409' || storageError.message === 'The resource already exists');
+    if ((storageError && !duplicate) || (!data && !duplicate)) return storageFailure(storageError);
+    const { error: metadataError } = await supabase.from('recording_segments').upsert({
+      id, user_id: auth.user.id, creation_session_id: null, storage_path: path,
+      title: title.trim(), recorded_at: new Date(recordedAt).toISOString(),
+      duration_ms: durationMs, position: Number(position),
+    }, { onConflict: 'user_id,id', ignoreDuplicates: true });
+    if (metadataError) return error('Your audio is stored, but the timeline could not sync. Please retry.', 502);
 
     return Response.json(
       {
-        id: data.id,
+        id,
         bucket: BUCKET,
-        path: data.path,
+        path,
         title: title.trim(),
         durationMs,
         contentType,

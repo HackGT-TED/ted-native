@@ -55,7 +55,7 @@ function setup({ os = 'ios', fetch, timer = setTimeout, signedIn = true, configu
     fetch: async (...args) => {
       calls.push(args);
       const response = fetch ? await fetch(...args) : { ok: true, status: 204 };
-      return { json: async () => null, ...response };
+      return { json: async () => ({ id: 'segment-id', path: 'owner/segment-id.m4a' }), ...response };
     },
   });
   return { upload: exports.uploadRecording, calls, timers };

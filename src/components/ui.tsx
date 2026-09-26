@@ -27,6 +27,7 @@ const glyphs = {
   pause: "\ue034",
   trash: "\ue872",
   stop: "\ue047",
+  drag: "\ue25d",
 };
 export function Icon({
   name,

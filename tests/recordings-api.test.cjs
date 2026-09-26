@@ -15,6 +15,7 @@ function setup(options = {}) {
   const uploads = [];
   const tokens = [];
   const logs = [];
+  const rows = [];
   const exports = {};
   vm.runInNewContext(source, {
     exports, Request, Response, FormData, Uint8Array, crypto: webcrypto,
@@ -32,6 +33,10 @@ function setup(options = {}) {
             tokens.push(token);
             return options.auth ?? { data: { user: { id: userId } }, error: null };
           } },
+          from: table => ({ upsert: async (row, config) => {
+            rows.push({ table, row, config });
+            return { error: options.metadataError };
+          } }),
           storage: { from: bucket => ({ upload: async (path, bytes, config) => {
             uploads.push({ bucket, path, bytes, config });
             if (options.throwStorage) throw new Error('upstream credential details');
@@ -41,7 +46,7 @@ function setup(options = {}) {
       } };
     },
   });
-  return { post: exports.POST, clients, uploads, tokens, logs };
+  return { post: exports.POST, clients, uploads, tokens, logs, rows };
 }
 
 function request(fields = {}, headers = {}) {
@@ -71,7 +76,9 @@ test('POST uploads bytes privately under the verified user with metadata', async
   assert.equal(upload.config.contentType, 'audio/mp4');
   assert.equal(upload.config.metadata.title, 'Bedtime story');
   assert.equal(upload.config.metadata.durationMs, 1234);
-  assert.equal(result.id, 'storage-id');
+  assert.equal(result.id, h.rows[0].row.id);
+  assert.equal(h.rows[0].row.user_id, userId);
+  assert.equal(h.rows[0].row.duration_ms, 1234);
   assert.equal(result.path, upload.path);
   assert.equal(result.size, 11);
   assert.equal(result.url, undefined, 'Private recordings must not get public URLs');
@@ -181,5 +188,38 @@ test('storage setup failures and limits have actionable, safe error responses', 
     assert.equal(result.code, code);
     assert.ok(result.error);
     assert.equal(h.logs[0][1].code, code);
+  }
+});
+
+
+test('stable segment identity gives retries the same immutable path', async () => {
+  const h = setup();
+  const fields = { id: 'stable-segment-1', recordedAt: '2026-09-26T12:00:00.000Z', position: '1234' };
+  await h.post(request(fields));
+  await h.post(request(fields));
+  assert.equal(h.uploads[0].path, h.uploads[1].path);
+  assert.equal(h.rows[0].config.ignoreDuplicates, true);
+  assert.equal(h.rows[0].row.recorded_at, fields.recordedAt);
+});
+
+test('retry repairs metadata after audio was already uploaded', async () => {
+  const h = setup({ storageError: { statusCode: '409' } });
+  const response = await h.post(request({ id: 'stable-segment-1' }));
+  assert.equal(response.status, 201);
+  assert.equal(h.rows.length, 1);
+});
+
+test('metadata failure returns a retryable error rather than claiming success', async () => {
+  const h = setup({ metadataError: { message: 'missing relation' } });
+  const response = await h.post(request());
+  assert.equal(response.status, 502);
+  assert.match((await response.json()).error, /audio is stored/);
+});
+
+test('invalid segment identities and ordering cannot reach storage', async () => {
+  for (const fields of [{ id: '../other-user' }, { position: '-1' }, { position: '1.5' }, { recordedAt: 'invalid' }]) {
+    const h = setup();
+    assert.equal((await h.post(request(fields))).status, 400);
+    assert.equal(h.uploads.length, 0);
   }
 });
