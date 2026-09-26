@@ -4,7 +4,7 @@ export type Recording = { uri: string; title: string; duration: number; recorded
 export type RecordingSegment = {
   id: string;
   userId: string | null;
-  /** null is the user's ongoing draft; reserved for future named story drafts. */
+  /** null is the user's legacy draft; new stories have their own project UUID. */
   creationSessionId: string | null;
   localUri?: string;
   storagePath?: string;

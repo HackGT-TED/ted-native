@@ -8,6 +8,7 @@ import { colors } from '../components/ui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 export default function RootLayout() {
   const [loaded, error] = useFonts({
+    'Tedfont-Regular': require('../../assets/fonts/Tedfont-Regular.ttf'),
     Icons: require('../../assets/fonts/Icons.ttf')
   });
   if (!loaded && !error) return <View className="flex-1 items-center justify-center bg-paper"><ActivityIndicator color={colors.cocoa} /></View>;

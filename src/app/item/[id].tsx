@@ -13,7 +13,7 @@ export default function Item() {
     <Pressable accessibilityRole="link" onPress={() => router.replace(from === 'library' ? '/library' : '/explore')} className="min-h-[60px] flex-row items-center gap-2.5"><Icon name="back" size={18} /><Text className="text-[13px] text-muted">{from === 'library' ? 'Library' : 'Explore'}</Text></Pressable>
     {item ? <>
       <Cover item={item} tall />
-      <View className="mt-7"><Heading className="!text-[24px] !leading-[30px]">{item.title.replace('\n', ' ')}</Heading><Body className="mt-2.5">{item.subtitle}</Body></View>
+      <View className="mt-7"><Heading className="!text-[32px] !leading-[40px]">{item.title.replace('\n', ' ')}</Heading><Body className="mt-2.5">{item.subtitle}</Body></View>
       <Body className="py-6 !text-[12px]">Shared by {item.author}</Body>
       <Button title={saved.includes(item.id) ? 'Remove from library' : 'Save to library'} icon={saved.includes(item.id) ? 'check' : 'heart'} secondary={saved.includes(item.id)} onPress={() => toggleSave(item.id)} />
       <Body className="mt-[18px] text-center !text-[11px]">{saved.includes(item.id) ? 'You can find this creation in your Library.' : 'Keep this creation in your Library to revisit.'}</Body>
