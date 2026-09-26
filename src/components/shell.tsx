@@ -7,7 +7,8 @@ import { useStudio } from '../context/studio';
 
 const links = [
   { path: '/recorder' as const, title: 'Record', icon: 'mic' as const },
-  { path: '/marketplace' as const, title: 'Marketplace', icon: 'shop' as const },
+  { path: '/explore' as const, title: 'Explore', icon: 'search' as const },
+  { path: '/library' as const, title: 'Library', icon: 'book' as const },
   { path: '/create' as const, title: 'Create', icon: 'create' as const },
 ];
 export function Shell({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
@@ -53,7 +54,7 @@ const s = StyleSheet.create({
   eye: { position: 'absolute', top: 7, width: 3, height: 3, borderRadius: 2, backgroundColor: colors.paper },
   nose: { position: 'absolute', top: 12, left: 10, width: 4, height: 3, borderRadius: 2, backgroundColor: colors.paper },
   brandText: { fontSize: 23, fontWeight: '700', letterSpacing: -1.1, color: colors.ink },
-  nav: { flexDirection: 'row', gap: 36 },
+  nav: { flexDirection: 'row', gap: 24 },
   navItem: { minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 5 },
   mobileItem: { flex: 1 },
   navText: { fontSize: 13, color: colors.muted },

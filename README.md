@@ -1,5 +1,15 @@
 # Welcome to your Expo app 👋
 
+## Supabase accounts
+
+Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local` (see `.env.example`), then restart Expo. Use the project's public publishable key, never a service-role key.
+
+The account sheet uses `components/Auth.tsx` for email/password sign-in and registration, and `components/Account.tsx` for profile editing and sign-out. Sessions persist across app restarts. If email confirmation is enabled in Supabase, confirm the email and then sign in here; a confirmation-only response does not sign the user in. Configure a valid Site URL for the confirmation page in Supabase Auth.
+
+Profile editing requires a `public.profiles` table with `id` (UUID referencing `auth.users`), `username`, `website`, and `updated_at`. Apply `supabase/migrations/20260926000100_profiles.sql` to a new project, or ensure your existing table has equivalent owner-only select/insert/update policies. This migration is provided locally and has not been applied to a remote project. A profile is created on the first save; no signup trigger or avatar bucket is required. Existing avatar data is preserved.
+
+The account sheet keeps its brown styling, slide-up transition, and flush bottom edge. Community creations and Library saves are still session-only mockup data; authentication does not upload them to Supabase.
+
 ## Recording uploads
 
 Copy `.env.example` to `.env.local` and set `EXPO_PUBLIC_UPLOAD_URL` to your API's HTTPS upload endpoint, then restart Expo. This value is public app configuration; never place secrets in it.
@@ -14,7 +24,7 @@ After recording a take, tap **Upload recording**. The app sends a multipart `POS
 
 Any successful 2xx response marks the take as uploaded; no response body is required. The app leaves multipart boundary headers to `fetch`, prevents duplicate taps, and offers manual retry on failure. Requests time out after two minutes and are cancelled when the take is replaced, discarded, or the recorder unmounts. Cancellation cannot undo a file already received by the server.
 
-The backend is not included. For web, it must allow the app origin via CORS. The existing demo sign-in does not provide API authentication; wire your backend's authentication into `src/services/upload-recording.ts` when available. Uploads happen only when tapped, and recordings otherwise remain in session memory/device cache.
+The upload backend is not included. For web, it must allow the app origin via CORS. The upload request does not currently send a Supabase access token; wire your upload backend's authentication into `src/services/upload-recording.ts` when available. Uploads happen only when tapped, and recordings otherwise remain in session memory/device cache.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 

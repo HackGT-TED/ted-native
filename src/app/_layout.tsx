@@ -21,6 +21,9 @@ export default function RootLayout() {
         backgroundColor: colors.paper
       }
     }}><Stack.Screen name="auth" options={{
-        presentation: 'modal'
+        presentation: 'transparentModal',
+        animation: 'slide_from_bottom',
+        gestureEnabled: false,
+        contentStyle: { backgroundColor: 'transparent' }
       }} /></Stack></StudioProvider>;
 }

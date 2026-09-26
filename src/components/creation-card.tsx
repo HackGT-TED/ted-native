@@ -11,16 +11,15 @@ export function Cover({ item, tall = false }: { item: Creation; tall?: boolean }
     <Text style={s.coverAuthor}>{item.author}</Text>
   </View>;
 }
-export function CreationCard({ item }: { item: Creation }) {
+export function CreationCard({ item, origin = 'explore' }: { item: Creation; origin?: 'explore' | 'library' }) {
   const { saved, toggleSave } = useStudio();
   const selected = saved.includes(item.id);
   return <View style={s.row}>
-    <Pressable accessibilityRole="link" accessibilityLabel={`View ${item.title.replace('\n', ' ')}`} onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })} style={s.info}>
+    <Pressable accessibilityRole="link" accessibilityLabel={`View ${item.title.replace('\n', ' ')}`} onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id, from: origin } })} style={s.info}>
       <View style={[s.thumbnail, { backgroundColor: item.color }]}><Icon name={item.category === 'Journals' ? 'create' : 'book'} size={24} /></View>
       <View style={s.text}><Text style={s.title}>{item.title.replace('\n', ' ')}</Text><Text style={s.author}>{item.category} · {item.author}</Text></View>
     </Pressable>
-    <Text style={s.price}>{item.price}</Text>
-    <Pressable accessibilityRole="button" accessibilityLabel={`${selected ? 'Unsave' : 'Save'} ${item.title.replace('\n', ' ')}`} accessibilityState={{ selected }} onPress={() => toggleSave(item.id)} style={s.save}><Icon name={selected ? 'check' : 'heart'} size={20} color={selected ? colors.ink : colors.muted} /></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${selected ? 'Remove from library:' : 'Save to library:'} ${item.title.replace('\n', ' ')}`} accessibilityState={{ selected }} onPress={() => toggleSave(item.id)} style={s.save}><Icon name={selected ? 'check' : 'heart'} size={20} color={selected ? colors.ink : colors.muted} /></Pressable>
   </View>;
 }
 const s = StyleSheet.create({
@@ -30,7 +29,6 @@ const s = StyleSheet.create({
   text: { flex: 1, gap: 7 },
   title: { fontSize: 15, fontWeight: '500', color: colors.ink, lineHeight: 21 },
   author: { fontSize: 11, lineHeight: 17, color: colors.muted },
-  price: { fontSize: 13, color: colors.ink },
   save: { width: 40, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
   cover: { backgroundColor: colors.cream, borderRadius: 12, minHeight: 230, padding: 28, justifyContent: 'flex-end' },
   marker: { width: 36, height: 5, borderRadius: 3, marginBottom: 30 },

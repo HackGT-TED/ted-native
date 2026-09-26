@@ -6,7 +6,7 @@ export const colors = {
   line: '#E2D2BC', cream: '#F0E4D3', honey: '#B88D5B', rust: '#A14E3B',
 };
 const glyphs = {
-  home: '\ue88a', shop: '\ue8d1', create: '\ue3c9', arrow: '\ue5c8',
+  home: '\ue88a', create: '\ue3c9', arrow: '\ue5c8',
   back: '\ue5c4', close: '\ue5cd', person: '\ue7fd', book: '\ue865',
   heart: '\ue87e', search: '\ue8b6', check: '\ue5ca', mic: '\ue029',
   play: '\ue037', pause: '\ue034', trash: '\ue872', stop: '\ue047',
@@ -25,11 +25,11 @@ export function Heading({ children, style }: { children: ReactNode; style?: Styl
 export function Body({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text style={[styles.body, style]}>{children}</Text>;
 }
-export function Button({ title, onPress, secondary = false, icon, style }: {
+export function Button({ title, onPress, secondary = false, disabled = false, icon, style }: {
   title: string; onPress: () => void; secondary?: boolean;
-  icon?: keyof typeof glyphs; style?: StyleProp<ViewStyle>;
+  icon?: keyof typeof glyphs; style?: StyleProp<ViewStyle>; disabled?: boolean;
 }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, style, pressed && { opacity: 0.65 }]}>
+  return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, style, (pressed || disabled) && { opacity: 0.65 }]}>
     <Text style={[styles.buttonText, secondary && { color: colors.ink }]}>{title}</Text>
     {icon && <Icon name={icon} size={19} color={secondary ? colors.ink : colors.paper} />}
   </Pressable>;
