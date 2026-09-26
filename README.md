@@ -20,19 +20,26 @@ The account sheet keeps its brown styling, slide-up transition, and flush bottom
 
 ## Recording uploads
 
-Copy `.env.example` to `.env.local` and set `EXPO_PUBLIC_UPLOAD_URL` to your API's HTTPS upload endpoint, then restart Expo. This value is public app configuration; never place secrets in it.
+The Upload recording button sends an authenticated multipart `POST /api/recordings` to the Expo Router API route in `src/app/api/recordings+api.ts`. The handler verifies the Supabase access token and stores the audio in the private `recordings` bucket at `<user-id>/<generated-id>.<extension>`. The title and duration are saved as object user metadata. No service-role key is needed.
 
-After recording a take, tap **Upload recording**. The app sends a multipart `POST` with these fields:
+Before the first upload:
 
-| Field | Value |
+1. Apply `supabase/migrations/20260926000200_recordings.sql` in the Supabase SQL editor (or through your migration runner). This creates the private bucket, a 25 MB file limit, and policies allowing authenticated users to insert and read only their own files. The script is safe to re-run, including if the bucket was created manually. It has not been applied remotely by this code change.
+2. Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`, restart `npx expo start`, and sign in. These same variables must be set on the deployed API server.
+
+No upload URL is required during development: Expo resolves `/api/recordings` against the dev server, including from a connected iPhone. `EXPO_PUBLIC_UPLOAD_URL` can optionally override the endpoint.
+
+| Multipart field | Value |
 | --- | --- |
-| `audio` | Audio file: M4A on iOS/Android, browser recording format on web |
-| `title` | Recording title |
-| `durationMs` | Duration in milliseconds, serialized as text |
+| `audio` | Non-empty M4A, WebM, or Ogg file, up to 25 MB |
+| `title` | Trimmed title, 1–80 characters |
+| `durationMs` | Positive integer duration in milliseconds |
 
-Any successful 2xx response marks the take as uploaded; no response body is required. The app leaves multipart boundary headers to `fetch`, prevents duplicate taps, and offers manual retry on failure. Requests time out after two minutes and are cancelled when the take is replaced, discarded, or the recorder unmounts. Cancellation cannot undo a file already received by the server.
+Send `Authorization: Bearer <Supabase access token>`; the app supplies it from the current session. Let `fetch` generate the multipart Content-Type boundary. A successful response has status `201` and JSON `{ id, bucket, path, title, durationMs, contentType, size }`. Files remain private; the response does not expose a public URL. Error responses contain `{ error }`: `400` for invalid fields/body, `401` for missing/invalid authentication, `403` for denied storage access, `413` for size limits, `415` for unsupported media, and `502`/`503` for storage/configuration failures.
 
-The upload backend is not included. For web, it must allow the app origin via CORS. The upload request does not currently send a Supabase access token; wire your upload backend's authentication into `src/services/upload-recording.ts` when available. Uploads happen only when tapped, and recordings otherwise remain in session memory/device cache.
+The client prevents duplicate taps, offers manual retry, times out after two minutes, and cancels when the take is replaced, discarded, or the recorder unmounts. Cancellation cannot undo an upload already stored; a retry after a lost response can create another copy. Local discard does not delete an uploaded file. Uploading stores audio and metadata only; it does not publish a community creation.
+
+For production, `web.output` is set to `server` so the API route is exported. Deploy the web/server export to a supported host, then set the Expo Router plugin's `origin` to that HTTPS server (or set `EXPO_PUBLIC_UPLOAD_URL` to its full `/api/recordings` URL) before building the native app. A native EAS build alone does not host this API. See [Expo API routes and deployment](https://docs.expo.dev/router/web/api-routes/). Cross-origin web hosting requires your host to allow the app origin and Authorization header via CORS.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 

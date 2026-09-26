@@ -13,7 +13,6 @@ export default function Account({
   displayName?: string;
 }) {
   const [username, setUsername] = useState(displayName);
-  const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -34,7 +33,7 @@ export default function Account({
       try {
         const { data, error: profileError } = await client!
           .from("profiles")
-          .select("username, website")
+          .select("username")
           .eq("id", userId)
           .abortSignal(controller.signal)
           .maybeSingle();
@@ -42,7 +41,6 @@ export default function Account({
         if (!live) return;
         if (data) {
           setUsername(data.username ?? "");
-          setWebsite(data.website ?? "");
         }
         setReady(true);
       } catch {
@@ -73,7 +71,6 @@ export default function Account({
       const { error: profileError } = await supabase.from("profiles").upsert({
         id: userId,
         username: username.trim(),
-        website: website.trim(),
         updated_at: new Date().toISOString(),
       });
       if (profileError) throw profileError;
