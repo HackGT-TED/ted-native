@@ -13,7 +13,7 @@ export function useAuthSession() {
     if (!client) return;
     let live = true;
     let receivedEvent = false;
-    // Keep this callback synchronous: Supabase auth calls here can deadlock.
+    // Keep the listener limited to state updates; refresh work belongs outside it.
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, next) => {
       if (!live) return;
       receivedEvent = true;
