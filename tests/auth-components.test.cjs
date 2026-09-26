@@ -108,19 +108,25 @@ test('profile load failure prevents overwriting a profile and leaves sign-out av
 
 test('first profile save uses session owner and preserves avatar data', async () => {
   let row, metadata;
+  const tables = [];
   const query = { select: () => query, eq: () => query, abortSignal: () => query,
     maybeSingle: async () => ({ data: null, error: null }),
     upsert: async value => { row = value; return { error: null }; } };
   const h = setup('src/components/Account.tsx', {
-    from: () => query,
+    from: table => { tables.push(table); return query; },
     auth: { updateUser: async value => { metadata = value; return { error: null }; } },
-  }, { userId: 'owner', displayName: 'Teddy' });
+  }, { userId: 'owner', email: 'teddy@example.com', displayName: 'Teddy' });
   await tick(); h.render();
   h.field('Username', ' Teddy Bear ');
+  h.field('Full name', ' Theodore Bear ');
   h.press('Save profile');
   await tick(); h.render();
+  assert.deepEqual(tables, ['userProfiles', 'userProfiles']);
   assert.equal(row.id, 'owner');
   assert.equal(row.username, 'Teddy Bear');
+  assert.equal(row.full_name, 'Theodore Bear');
+  assert.equal(row.email, 'teddy@example.com');
+  assert.equal('familyID' in row, false);
   assert.equal('avatar_url' in row, false);
   assert.equal(metadata.data.display_name, 'Teddy Bear');
   assert.match(h.text(), /Profile saved/);

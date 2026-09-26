@@ -13,6 +13,7 @@ export default function Account({
   displayName?: string;
 }) {
   const [username, setUsername] = useState(displayName);
+  const [fullName, setFullName] = useState(displayName);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -32,15 +33,17 @@ export default function Account({
       setError("");
       try {
         const { data, error: profileError } = await client!
-          .from("profiles")
-          .select("username")
+          .from("userProfiles")
+          .select("username, full_name")
           .eq("id", userId)
           .abortSignal(controller.signal)
           .maybeSingle();
         if (profileError) throw profileError;
         if (!live) return;
         if (data) {
-          setUsername(data.username ?? "");
+          // Keep the sign-up name when the profile row has no value yet.
+          if (data.username) setUsername(data.username);
+          if (data.full_name) setFullName(data.full_name);
         }
         setReady(true);
       } catch {
@@ -68,9 +71,11 @@ export default function Account({
     setError("");
     setNotice("");
     try {
-      const { error: profileError } = await supabase.from("profiles").upsert({
+      const { error: profileError } = await supabase.from("userProfiles").upsert({
         id: userId,
         username: username.trim(),
+        full_name: fullName.trim() || null,
+        ...(email ? { email } : {}),
         updated_at: new Date().toISOString(),
       });
       if (profileError) throw profileError;
@@ -124,6 +129,16 @@ export default function Account({
         value={username}
         onChangeText={setUsername}
         editable={ready && !busy}
+        maxLength={80}
+        className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] text-ink"
+      />
+      <Text className="mb-2.5 mt-6 text-[13px] text-ink">Full name</Text>
+      <TextInput
+        accessibilityLabel="Full name"
+        value={fullName}
+        onChangeText={setFullName}
+        editable={ready && !busy}
+        autoComplete="name"
         maxLength={80}
         className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] text-ink"
       />
