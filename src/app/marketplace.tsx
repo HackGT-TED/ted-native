@@ -1,103 +1,31 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Shell } from '../components/shell';
-import { Body, colors, Heading, Icon, Label, Ornament } from '../components/ui';
+import { Body, colors, Heading, Icon } from '../components/ui';
 import { CreationCard } from '../components/creation-card';
 import { useStudio } from '../context/studio';
+
 export default function Marketplace() {
-  const {
-    creations,
-    saved
-  } = useStudio();
-  const [category, setCategory] = useState('All wonders');
+  const { creations, saved } = useStudio();
+  const [category, setCategory] = useState('All');
   const [query, setQuery] = useState('');
-  const {
-    width
-  } = useWindowDimensions();
-  const mobile = width < 700;
-  const items = creations.filter(item => (category === 'All wonders' || (category === 'Saved' ? saved.includes(item.id) : item.category === category)) && `${item.title} ${item.author}`.toLowerCase().replace('\n', ' ').includes(query.toLowerCase()));
-  return <Shell><View style={s.intro}><Label>THE TEDTIME MARKETPLACE</Label><Heading style={{
-        fontSize: mobile ? 42 : 55,
-        lineHeight: 59,
-        textAlign: 'center',
-        marginTop: 8
-      }}>Find your little wonder.</Heading><Body style={{
-        textAlign: 'center',
-        marginTop: 8
-      }}>Stories, journals, and keepsakes from imaginative souls.</Body><Ornament /></View><View style={s.search}><Icon name="search" color={colors.muted} /><TextInput accessibilityLabel="Search the marketplace" placeholder="A story, a maker, a little inspiration…" placeholderTextColor={colors.muted} value={query} onChangeText={setQuery} style={s.input} />{query ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery('')}><Icon name="close" size={19} /></Pressable> : null}</View><View style={s.filters}>{['All wonders', 'Stories', 'Journals', 'Prints', 'Saved'].map(value => <Pressable accessibilityRole="button" accessibilityState={{
-        selected: value === category
-      }} key={value} onPress={() => setCategory(value)} style={[s.chip, value === category && s.selected]}><Text style={[s.chipText, value === category && {
-          color: colors.paper
-        }]}>{value}</Text></Pressable>)}</View><Text style={s.count}>{items.length} little {items.length === 1 ? 'wonder' : 'wonders'} to discover</Text><View style={s.grid}>{items.map(item => <View key={item.id} style={{
-        width: mobile ? '47%' : '31%'
-      }}><CreationCard item={item} /></View>)}</View>{items.length === 0 && <View style={s.empty}><Icon name="leaf" size={40} color={colors.gold} /><Heading style={{
-        textAlign: 'center',
-        marginTop: 15
-      }}>A quiet little corner.</Heading><Body style={{
-        textAlign: 'center',
-        marginTop: 10
-      }}>{category === 'Saved' ? 'Tap the heart on a creation to keep it here.' : 'Try a different search or category to find your wonder.'}</Body></View>}</Shell>;
+  const items = creations.filter(item => (category === 'All' || (category === 'Saved' ? saved.includes(item.id) : item.category === category)) && `${item.title} ${item.author}`.replace('\n', ' ').toLowerCase().includes(query.trim().toLowerCase()));
+  return <Shell><View style={s.page}>
+    <Heading>Marketplace</Heading><Body style={{ marginTop: 8 }}>Independent stories, journals, and prints.</Body>
+    <View style={s.search}><Icon name="search" size={20} color={colors.muted} /><TextInput accessibilityLabel="Search the marketplace" value={query} onChangeText={setQuery} placeholder="Search" placeholderTextColor={colors.muted} style={s.input} />{query ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery('')} style={s.clear}><Icon name="close" size={18} /></Pressable> : null}</View>
+    <View style={s.filters}>{['All', 'Stories', 'Journals', 'Prints', 'Saved'].map(value => <Pressable accessibilityRole="button" accessibilityState={{ selected: category === value }} onPress={() => setCategory(value)} key={value} style={[s.filter, category === value && s.active]}><Text style={[s.filterText, category === value && { color: colors.ink }]}>{value}</Text></Pressable>)}</View>
+    {items.map(item => <CreationCard key={item.id} item={item} />)}
+    {!items.length && <Body style={s.empty}>{category === 'Saved' ? 'Saved items will appear here.' : 'No results. Try another search.'}</Body>}
+  </View></Shell>;
 }
 const s = StyleSheet.create({
-  intro: {
-    alignItems: 'center',
-    paddingTop: 38
-  },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#F0ECE1',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 6,
-    paddingHorizontal: 16,
-    maxWidth: 600,
-    width: '100%',
-    alignSelf: 'center'
-  },
-  input: {
-    flex: 1,
-    height: 50,
-    fontSize: 13,
-    color: colors.ink
-  },
-  filters: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    marginVertical: 23
-  },
-  chip: {
-    paddingHorizontal: 16,
-    minHeight: 40,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 25
-  },
-  selected: {
-    backgroundColor: colors.green,
-    borderColor: colors.green
-  },
-  chipText: {
-    fontSize: 11,
-    color: colors.muted
-  },
-  count: {
-    fontSize: 11,
-    color: colors.muted,
-    marginBottom: 19
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 25
-  },
-  empty: {
-    alignItems: 'center',
-    paddingVertical: 45
-  }
+  page: { maxWidth: 700, width: '100%', alignSelf: 'center', paddingTop: 36 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 28, backgroundColor: colors.cream, paddingHorizontal: 16, borderRadius: 10 },
+  input: { flex: 1, minHeight: 50, fontSize: 14, color: colors.ink },
+  clear: { minWidth: 36, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 22, marginTop: 20, borderBottomWidth: 1, borderColor: colors.line },
+  filter: { minHeight: 44, justifyContent: 'center' },
+  active: { borderBottomWidth: 2, borderColor: colors.ink },
+  filterText: { fontSize: 12, color: colors.muted },
+  empty: { textAlign: 'center', marginTop: 70 },
 });

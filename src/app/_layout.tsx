@@ -6,7 +6,6 @@ import { StudioProvider } from '../context/studio';
 import { colors } from '../components/ui';
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    Cormorant: require('../../assets/fonts/CormorantGaramond.ttf'),
     Icons: require('../../assets/fonts/Icons.ttf')
   });
   if (!loaded && !error) return <View style={{
@@ -14,7 +13,7 @@ export default function RootLayout() {
     backgroundColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center'
-  }}><ActivityIndicator color={colors.green} /></View>;
+  }}><ActivityIndicator color={colors.cocoa} /></View>;
   return <StudioProvider><StatusBar style="dark" /><Stack screenOptions={{
       headerShown: false,
       animation: 'none',

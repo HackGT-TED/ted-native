@@ -14,7 +14,7 @@ export const originals: Creation[] = [{
   title: 'The Woodland\nCompanion',
   author: 'Florence & Fern',
   category: 'Stories',
-  color: '#E2E6D8',
+  color: '#E4CDB0',
   subtitle: 'A collection of small adventures',
   price: '$12',
   illustrated: true
@@ -23,7 +23,7 @@ export const originals: Creation[] = [{
   title: 'The art of\nordinary days',
   author: 'Eleanor Rose',
   category: 'Journals',
-  color: '#E9DDCC',
+  color: '#EEDFCB',
   subtitle: 'A journal for noticing more',
   price: '$8'
 }, {
@@ -31,7 +31,7 @@ export const originals: Creation[] = [{
   title: 'Wildflowers\n& little wonders',
   author: 'The Quiet Studio',
   category: 'Prints',
-  color: '#E0E1CF',
+  color: '#DBC4A6',
   subtitle: 'Botanical notes from the meadow',
   price: '$6'
 }, {
@@ -39,11 +39,14 @@ export const originals: Creation[] = [{
   title: 'A pocketful\nof Sundays',
   author: 'Oliver Moss',
   category: 'Stories',
-  color: '#EAD8CD',
+  color: '#E7CBBB',
   subtitle: 'Stories for taking your time',
   price: '$10'
 }];
+export type Recording = { uri: string; title: string; duration: number };
 type Studio = {
+  recording: Recording | null;
+  setRecording: (recording: Recording | null) => void;
   name: string;
   signIn: (name: string) => void;
   signOut: () => void;
@@ -59,9 +62,12 @@ export function StudioProvider({
   children: ReactNode;
 }) {
   const [name, setName] = useState('');
+  const [recording, setRecording] = useState<Recording | null>(null);
   const [creations, setCreations] = useState(originals);
   const [saved, setSaved] = useState<string[]>([]);
   return <Context.Provider value={{
+    recording,
+    setRecording,
     name,
     signIn: setName,
     signOut: () => setName(''),

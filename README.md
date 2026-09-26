@@ -1,5 +1,21 @@
 # Welcome to your Expo app 👋
 
+## Recording uploads
+
+Copy `.env.example` to `.env.local` and set `EXPO_PUBLIC_UPLOAD_URL` to your API's HTTPS upload endpoint, then restart Expo. This value is public app configuration; never place secrets in it.
+
+After recording a take, tap **Upload recording**. The app sends a multipart `POST` with these fields:
+
+| Field | Value |
+| --- | --- |
+| `audio` | Audio file: M4A on iOS/Android, browser recording format on web |
+| `title` | Recording title |
+| `durationMs` | Duration in milliseconds, serialized as text |
+
+Any successful 2xx response marks the take as uploaded; no response body is required. The app leaves multipart boundary headers to `fetch`, prevents duplicate taps, and offers manual retry on failure. Requests time out after two minutes and are cancelled when the take is replaced, discarded, or the recorder unmounts. Cancellation cannot undo a file already received by the server.
+
+The backend is not included. For web, it must allow the app origin via CORS. The existing demo sign-in does not provide API authentication; wire your backend's authentication into `src/services/upload-recording.ts` when available. Uploads happen only when tapped, and recordings otherwise remain in session memory/device cache.
+
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
 ## Get started
