@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Shell } from '../../components/shell';
-import { Body, Button, colors, Heading, Icon } from '../../components/ui';
+import { Body, Button, Heading, Icon } from '../../components/ui';
 import { Cover } from '../../components/creation-card';
 import { useStudio } from '../../context/studio';
 
@@ -9,22 +9,14 @@ export default function Item() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { creations, saved, toggleSave } = useStudio();
   const item = creations.find(creation => creation.id === id);
-  return <Shell><View style={s.page}>
-    <Pressable accessibilityRole="link" onPress={() => router.replace(from === 'library' ? '/library' : '/explore')} style={s.back}><Icon name="back" size={18} /><Text style={s.backText}>{from === 'library' ? 'Library' : 'Explore'}</Text></Pressable>
+  return <Shell><View className="w-full max-w-[500px] self-center pt-3">
+    <Pressable accessibilityRole="link" onPress={() => router.replace(from === 'library' ? '/library' : '/explore')} className="min-h-[60px] flex-row items-center gap-2.5"><Icon name="back" size={18} /><Text className="text-[13px] text-muted">{from === 'library' ? 'Library' : 'Explore'}</Text></Pressable>
     {item ? <>
       <Cover item={item} tall />
-      <View style={s.details}><Heading style={{ fontSize: 24, lineHeight: 30 }}>{item.title.replace('\n', ' ')}</Heading><Body style={{ marginTop: 10 }}>{item.subtitle}</Body></View>
-      <Body style={s.credit}>Shared by {item.author}</Body>
+      <View className="mt-7"><Heading className="!text-[24px] !leading-[30px]">{item.title.replace('\n', ' ')}</Heading><Body className="mt-2.5">{item.subtitle}</Body></View>
+      <Body className="py-6 !text-[12px]">Shared by {item.author}</Body>
       <Button title={saved.includes(item.id) ? 'Remove from library' : 'Save to library'} icon={saved.includes(item.id) ? 'check' : 'heart'} secondary={saved.includes(item.id)} onPress={() => toggleSave(item.id)} />
-      <Body style={s.note}>{saved.includes(item.id) ? 'You can find this creation in your Library.' : 'Keep this creation in your Library to revisit.'}</Body>
+      <Body className="mt-[18px] text-center !text-[11px]">{saved.includes(item.id) ? 'You can find this creation in your Library.' : 'Keep this creation in your Library to revisit.'}</Body>
     </> : <><Heading>Item not found</Heading><Body>This creation is no longer available.</Body></>}
   </View></Shell>;
 }
-const s = StyleSheet.create({
-  page: { width: '100%', maxWidth: 500, alignSelf: 'center', paddingTop: 12 },
-  back: { flexDirection: 'row', gap: 10, minHeight: 60, alignItems: 'center' },
-  backText: { fontSize: 13, color: colors.muted },
-  details: { marginTop: 28 },
-  credit: { paddingVertical: 24, fontSize: 12 },
-  note: { fontSize: 11, textAlign: 'center', marginTop: 18 },
-});

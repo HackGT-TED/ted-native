@@ -21,7 +21,6 @@ function setup(file, client, props = {}) {
     'react-native': Object.fromEntries(['Pressable', 'Text', 'TextInput', 'View'].map(key => [key, key])),
     '../lib/supabase': { supabase: client },
     './ui': { Body: 'Body', Button: 'Button', colors: {}, fieldStyles: {} },
-    '../styles/styles': { appStyles: {} },
   };
   const exports = {};
   vm.runInNewContext(source, { exports, require: name => { assert.ok(modules[name], name); return modules[name]; }, AbortController, Error, Date });

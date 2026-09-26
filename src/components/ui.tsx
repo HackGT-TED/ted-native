@@ -1,49 +1,114 @@
-import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextStyle, ViewStyle, StyleProp } from 'react-native';
+import { ReactNode } from "react";
+import { Pressable, Text } from "react-native";
 
 export const colors = {
-  paper: '#FBF6EE', ink: '#493529', muted: '#786351', cocoa: '#765139',
-  line: '#E2D2BC', cream: '#F0E4D3', honey: '#B88D5B', rust: '#A14E3B',
+  paper: "#FBF6EE",
+  ink: "#493529",
+  muted: "#786351",
+  cocoa: "#765139",
+  line: "#E2D2BC",
+  cream: "#F0E4D3",
+  honey: "#B88D5B",
+  rust: "#A14E3B",
 };
 const glyphs = {
-  home: '\ue88a', create: '\ue3c9', arrow: '\ue5c8',
-  back: '\ue5c4', close: '\ue5cd', person: '\ue7fd', book: '\ue865',
-  heart: '\ue87e', search: '\ue8b6', check: '\ue5ca', mic: '\ue029',
-  play: '\ue037', pause: '\ue034', trash: '\ue872', stop: '\ue047',
+  home: "\ue88a",
+  create: "\ue3c9",
+  arrow: "\ue5c8",
+  back: "\ue5c4",
+  close: "\ue5cd",
+  person: "\ue7fd",
+  book: "\ue865",
+  heart: "\ue87e",
+  search: "\ue8b6",
+  check: "\ue5ca",
+  mic: "\ue029",
+  play: "\ue037",
+  pause: "\ue034",
+  trash: "\ue872",
+  stop: "\ue047",
 };
-export function Icon({ name, size = 22, color = colors.ink }: {
-  name: keyof typeof glyphs; size?: number; color?: string;
+export function Icon({
+  name,
+  size = 22,
+  color = colors.ink,
+}: {
+  name: keyof typeof glyphs;
+  size?: number;
+  color?: string;
 }) {
-  return <Text accessible={false} style={{ fontFamily: 'Icons', fontSize: size, color, lineHeight: size + 2 }}>{glyphs[name]}</Text>;
+  return (
+    <Text
+      accessible={false}
+      className="font-icons"
+      style={{ fontSize: size, color, lineHeight: size + 2 }}
+    >
+      {glyphs[name]}
+    </Text>
+  );
 }
-export function Label({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.label, style]}>{children}</Text>;
+type TypographyProps = { children: ReactNode; className?: string };
+
+export function Label({ children, className = "" }: TypographyProps) {
+  return (
+    <Text
+      className={`text-[11px] font-medium tracking-[1.6px] text-muted ${className}`}
+    >
+      {children}
+    </Text>
+  );
 }
-export function Heading({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.heading, style]}>{children}</Text>;
+export function Heading({ children, className = "" }: TypographyProps) {
+  return (
+    <Text
+      className={`text-[30px] font-semibold leading-[38px] tracking-[-1px] text-ink ${className}`}
+    >
+      {children}
+    </Text>
+  );
 }
-export function Body({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[styles.body, style]}>{children}</Text>;
+export function Body({ children, className = "" }: TypographyProps) {
+  return (
+    <Text className={`text-[14px] leading-[22px] text-muted ${className}`}>
+      {children}
+    </Text>
+  );
 }
-export function Button({ title, onPress, secondary = false, disabled = false, icon, style }: {
-  title: string; onPress: () => void; secondary?: boolean;
-  icon?: keyof typeof glyphs; style?: StyleProp<ViewStyle>; disabled?: boolean;
+export function Button({
+  title,
+  onPress,
+  secondary = false,
+  disabled = false,
+  icon,
+  className = "",
+}: {
+  title: string;
+  onPress: () => void;
+  secondary?: boolean;
+  icon?: keyof typeof glyphs;
+  disabled?: boolean;
+  className?: string;
 }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, style, (pressed || disabled) && { opacity: 0.65 }]}>
-    <Text style={[styles.buttonText, secondary && { color: colors.ink }]}>{title}</Text>
-    {icon && <Icon name={icon} size={19} color={secondary ? colors.ink : colors.paper} />}
-  </Pressable>;
+  return (
+    <Pressable
+      className={`min-h-[50px] flex-row items-center justify-center gap-3 rounded-[10px] px-[22px] active:opacity-[0.65] ${secondary ? "border border-line bg-transparent" : "bg-cocoa"} ${disabled ? "opacity-[0.65]" : ""} ${className}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+    >
+      <Text
+        className={`text-[14px] font-medium ${secondary ? "text-ink" : "text-paper"}`}
+      >
+        {title}
+      </Text>
+      {icon && (
+        <Icon
+          name={icon}
+          size={19}
+          color={secondary ? colors.ink : colors.paper}
+        />
+      )}
+    </Pressable>
+  );
 }
-export const fieldStyles = StyleSheet.create({
-  label: { fontSize: 13, color: colors.ink, marginBottom: 10, marginTop: 24 },
-  input: { minHeight: 52, borderWidth: 1, borderColor: colors.line, borderRadius: 10, paddingHorizontal: 16, fontSize: 15, color: colors.ink, backgroundColor: colors.paper },
-  error: { fontSize: 13, color: colors.rust, lineHeight: 20, marginVertical: 12 },
-});
-const styles = StyleSheet.create({
-  label: { color: colors.muted, fontSize: 11, letterSpacing: 1.6, fontWeight: '500' },
-  heading: { fontSize: 30, lineHeight: 38, fontWeight: '600', letterSpacing: -1, color: colors.ink },
-  body: { fontSize: 14, lineHeight: 22, color: colors.muted },
-  button: { backgroundColor: colors.cocoa, minHeight: 50, paddingHorizontal: 22, borderRadius: 10, flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center' },
-  secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line },
-  buttonText: { color: colors.paper, fontSize: 14, fontWeight: '500' },
-});

@@ -1,3 +1,4 @@
+import '../../global.css';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
@@ -8,12 +9,7 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     Icons: require('../../assets/fonts/Icons.ttf')
   });
-  if (!loaded && !error) return <View style={{
-    flex: 1,
-    backgroundColor: colors.paper,
-    alignItems: 'center',
-    justifyContent: 'center'
-  }}><ActivityIndicator color={colors.cocoa} /></View>;
+  if (!loaded && !error) return <View className="flex-1 items-center justify-center bg-paper"><ActivityIndicator color={colors.cocoa} /></View>;
   return <StudioProvider><StatusBar style="dark" /><Stack screenOptions={{
       headerShown: false,
       animation: 'none',
@@ -22,7 +18,7 @@ export default function RootLayout() {
       }
     }}><Stack.Screen name="auth" options={{
         presentation: 'transparentModal',
-        animation: 'slide_from_bottom',
+        animation: 'none',
         gestureEnabled: false,
         contentStyle: { backgroundColor: 'transparent' }
       }} /></Stack></StudioProvider>;

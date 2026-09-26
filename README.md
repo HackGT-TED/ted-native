@@ -1,5 +1,13 @@
 # Welcome to your Expo app 👋
 
+## Styling
+
+All screens and UI components use Tailwind utility classes through NativeWind 4. The palette and icon font are defined in `tailwind.config.js`. Metro uses `inlineRem: 16` so spacing utilities match the original numeric dimensions on native and web.
+
+Use `className` for component styling and `contentContainerClassName` for scroll content. Shared typography and buttons accept `className`; use Tailwind's `!` modifier when overriding a typography default (for example, `!text-[12px]`). Keep complete class names in conditional branches so Tailwind can discover them. Style props are reserved for runtime values (animated transforms, avatar/icon dimensions, creation colors) and navigator options that do not accept classes.
+
+After installing dependencies or changing Babel/Metro configuration, restart with `npx expo start --clear`. `global.css` is imported once from the root layout; components do not import a separate styles folder.
+
 ## Supabase accounts
 
 Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local` (see `.env.example`), then restart Expo. Use the project's public publishable key, never a service-role key.
