@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ted-native",
-    "slug": "ted",
+    "slug": "ted-native",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,12 +17,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.BLUETOOTH",
-        "android.permission.BLUETOOTH_ADMIN",
-        "android.permission.BLUETOOTH_CONNECT"
-      ]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
@@ -37,27 +32,11 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ],
-      [
-        "react-native-ble-manager",
-        {
-          "isBleRequired": true,
-          "neverForLocation": true,
-          "companionDeviceEnabled": false,
-          "bluetoothAlwaysPermission": "Allow TedTime to discover and connect to your nearby Bluetooth devices."
-        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "17b6ffea-0a18-4e8c-863a-d1b6f311711d"
-      }
-    },
-    "owner": "hackgt-ted"
+    }
   }
 }
