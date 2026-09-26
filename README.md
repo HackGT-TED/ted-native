@@ -1,3 +1,7 @@
+## Bluetooth LE
+
+Open **Devices** to scan, connect, and inspect BLE characteristics. A native development build is required. See [BLE setup and usage](docs/ble.md).
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
