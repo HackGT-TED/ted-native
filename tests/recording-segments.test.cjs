@@ -9,6 +9,7 @@ const cached = (id, userId = 'owner', status = 'local') => ({
 });
 function setup(options = {}) {
   const hooks = harness();
+  let projectId = null;
   let owner = options.owner === undefined ? 'owner' : options.owner;
   let storage = JSON.stringify(options.cache ?? []);
   const writes = [], uploads = [], edits = [];
@@ -41,8 +42,9 @@ function setup(options = {}) {
   const module = load('src/hooks/use-recording-segments.ts', modules);
   const h = {
     uploads, writes, edits,
-    render() { h.result = hooks.render(() => module.useRecordingSegments(owner, false)); return h.result; },
+    render() { h.result = hooks.render(() => module.useRecordingSegments(owner, false, projectId)); return h.result; },
     async flush() { for (let i = 0; i < 5; i++) { await tick(); h.render(); } },
+    switchProject(id) { projectId = id; h.render(); },
     switchUser(id) { owner = id; h.render(); },
   };
   h.render(); return h;
@@ -265,4 +267,45 @@ test('exhausted position gaps are re-spaced using safe integers', () => {
   assert.deepEqual(Array.from(moved, item => item.id), ['third', 'first', 'second']);
   assert.ok(moved.every(item => Number.isSafeInteger(item.order) && item.order >= 0));
   assert.ok(moved[0].order < moved[1].order && moved[1].order < moved[2].order);
+});
+
+test('moving the first segment between adjacent positions syncs every re-spaced row', async () => {
+  const cache = orderedCache().map((item, i) => ({ ...item, order: i }));
+  const h = setup({ cache }); await h.flush();
+  h.result.move('first', 'third'); await h.flush();
+  assert.deepEqual(ids(h), ['second', 'first', 'third']);
+  const remote = new Map(cache.map(item => [item.id, item.order]));
+  for (const edit of h.edits) remote.set(edit.id, edit.order);
+  assert.deepEqual([...remote].sort((a, b) => a[1] - b[1]).map(([id]) => id), ids(h));
+  assert.ok(h.result.segments.every(item => !item.pendingChange && !item.changeError));
+});
+
+test('a refresh started before moving the first segment cannot roll back the saved order', async () => {
+  const remote = deferred(), cache = orderedCache();
+  const h = setup({ cache, remote: remote.promise }); await h.flush();
+  h.result.move('first', null); await h.flush();
+  remote.resolve({ data: cache.map(item => ({ id: item.id, user_id: item.userId, creation_session_id: null,
+    storage_path: item.storagePath, title: item.title, recorded_at: item.createdAt,
+    duration_ms: item.durationMs, position: item.order, deleted_at: null })), error: null });
+  await h.flush();
+  assert.deepEqual(ids(h), ['second', 'third', 'first']);
+  assert.equal(h.edits.at(-1).id, 'first');
+  assert.equal(h.edits.at(-1).order, h.result.segments.at(-1).order);
+});
+
+
+test('new stories isolate recordings, retain upload association, and restore independently', async () => {
+  const h = setup({ cache: [cached('legacy-story', 'owner', 'uploaded')] }); await h.flush();
+  h.switchProject('aa222222-2222-4222-8222-222222222222'); await h.flush();
+  assert.equal(h.result.segments.length, 0);
+  await h.result.addRecording(capture); await h.flush();
+  assert.equal(h.result.segments.length, 1);
+  assert.equal(h.uploads[0].config.segment.creationSessionId, 'aa222222-2222-4222-8222-222222222222');
+  assert.equal(h.result.projects.length, 2);
+  h.switchProject(null); await h.flush();
+  assert.equal(h.result.segments[0].id, 'legacy-story');
+  const restored = setup({ cache: h.writes.at(-1) }); await restored.flush();
+  restored.switchProject('aa222222-2222-4222-8222-222222222222'); await restored.flush();
+  assert.equal(restored.result.segments.length, 1);
+  assert.equal(restored.result.segments[0].localUri, capture.uri);
 });

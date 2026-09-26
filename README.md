@@ -16,7 +16,7 @@ The account sheet uses `components/Auth.tsx` for email/password sign-in and regi
 
 Profile editing requires a `public.profiles` table with `id` (UUID referencing `auth.users`), `username`, `website`, and `updated_at`. Apply `supabase/migrations/20260926000100_profiles.sql` to a new project, or ensure your existing table has equivalent owner-only select/insert/update policies. This migration is provided locally and has not been applied to a remote project. A profile is created on the first save; no signup trigger or avatar bucket is required. Existing avatar data is preserved.
 
-The account sheet keeps its brown styling, slide-up transition, and flush bottom edge. Community creations and Library saves are still session-only mockup data; authentication does not upload them to Supabase.
+The account sheet keeps its brown styling, slide-up transition, and flush bottom edge. Community demo creations and their bookmarks remain session-only. Your recorded stories persist in `public.all_stories` as described below.
 
 ## Recording timeline
 
@@ -28,9 +28,15 @@ Finalized audio enters Create immediately. Metadata is serialized to AsyncStorag
 
 Create uses a virtualized timeline that starts in recording order, with date headers, timestamps, durations, progress, and subtle insertion animations. Hold a segment's handle to drag it into story order; the list scrolls near its edges. Tapping the handle exposes Move earlier/later controls, also available as accessibility actions. Order saves locally and syncs through the existing position field; new recordings append to the end. Navigation and backgrounding cancel an unfinished drag. One Expo Audio player serves the entire timeline: switching moments pauses the previous source and starts the new one from zero. Pausing the current moment preserves its position; replay after completion rewinds. Missing or unplayable local audio falls back to a short-lived signed URL from the private bucket. Navigation and backgrounding stop playback.
 
-Raw recording segments remain separate from community creations. The old publishing form remains available through **Share a written creation** at `/share`. Explore and Library continue to use session-only demo creations and saves. Story generation is not implemented. A nullable `creation_session_id` reserves the association for future named story drafts; currently each account has one ongoing draft.
+Raw recording segments remain separate from community creations. The old publishing form remains available through **Share a written creation** at `/share`. Explore and Library continue to use session-only demo creations and saves. Story generation is not implemented. New stories use `creation_session_id` to keep their recordings separate; null IDs preserve earlier drafts. The welcome screen appears on a clean reload, and its microphone opens a new story and starts recording after microphone permission. Tap stop to save the first moment; subsequent moments use hold-to-record. Earlier recorded stories can be reopened from the welcome screen. Story names are stored locally per account and project.
 
 Segment cards lead with an editable name; recording time, duration, and date headings use smaller secondary text. Use the pencil to name a segment and the trash control to confirm removing it from the story. Local edits are immediate and survive restarts. Names and deletion markers sync to the account with retry controls. Deletions stop active playback and remain hidden even if an older upload or refresh finishes later. This is a soft deletion from the story timeline; audio files remain in private storage.
+
+### Saving and publishing stories
+
+Create has **Save** and **Publish** actions. Sign in and finish syncing all recordings and edits before saving. Save retains the name in `all_stories`; Publish requires a name and at least one uploaded moment. Publishing marks the story as published in your own library. It does not expose private recordings to the community. Publishing captures the ordered recording metadata in `published_segments`; subsequent edits and Save retain that snapshot until Publish is pressed again.
+
+A database trigger retains a draft as soon as its first recording uploads. The migration backfills earlier recording projects, including the legacy draft with a null session ID. Names typed locally remain on the device until Save or Publish. Library combines account stories with local recording projects and can reopen either. Loading errors have retry controls; failed saves do not report success or discard local work. Account stories and audio remain private under row-level security.
 
 ### Supabase setup
 
@@ -38,7 +44,8 @@ Apply these local migrations to the Supabase project in order:
 
 1. `supabase/migrations/20260926000200_recordings.sql` — the existing private audio bucket and owner-only file policies.
 2. `supabase/migrations/20260926000300_recording_segments.sql` — owner-only segment metadata, timeline index, and backfill of previous uploads that have valid duration metadata.
-3. `supabase/migrations/20260926000400_segment_edits.sql` — owner-only updates for names, ordering, and persistent deletion markers. This migration has not been applied remotely.
+3. `supabase/migrations/20260926000400_segment_edits.sql` — owner-only updates for names, ordering, and persistent deletion markers.
+4. `supabase/migrations/20260926000500_all_stories.sql` — retained story records, backfill of existing recording projects, owner-only library access, and atomic save/publish. This migration has not been applied remotely.
 
 The new migrations have **not** been applied remotely. Dragging uses `react-native-draggable-flatlist` with the existing Gesture Handler and Reanimated modules; Reanimated is pinned to Expo SDK 57's compatible version. Keep `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configured on both app and API server; no service-role key is used.
 
@@ -62,7 +69,7 @@ The old hold-to-record and manual-upload hooks were replaced. Tests cover captur
 
 Run `npx expo lint`, `npx tsc --noEmit`, and `node --test tests/*.test.cjs`. The web/server bundle can be checked with `npx expo export --platform web`.
 
-Before release, test microphone capture on an iOS and Android development build: allow/deny permissions, record multiple takes, interrupt with background/navigation, retry while offline, restart, and play every take. Verify private storage and row policies against the configured Supabase project after applying the migration. Browser storage can be cleared by the user or unavailable in private browsing; persistence failures remain visible, and available bytes can still upload. A force-quit during an unfinished capture is not crash recovery. Automatic local-file pruning and named/multiple drafts are future work.
+Before release, test microphone capture on an iOS and Android development build: allow/deny permissions, record multiple takes, interrupt with background/navigation, retry while offline, restart, and play every take. Verify private storage and row policies against the configured Supabase project after applying the migration. Browser storage can be cleared by the user or unavailable in private browsing; persistence failures remain visible, and available bytes can still upload. A force-quit during an unfinished capture is not crash recovery. Automatic local-file pruning is future work.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 

@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 type UploadOptions = {
   url?: string;
   signal?: AbortSignal;
-  segment?: { id: string; createdAt: string; order: number; userId: string };
+  segment?: { id: string; createdAt: string; order: number; userId: string; creationSessionId?: string | null };
 };
 
 export type UploadedRecording = { id: string; path: string };
@@ -52,6 +52,7 @@ export async function uploadRecording(recording: Recording, options: UploadOptio
       body.append('id', options.segment.id);
       body.append('recordedAt', options.segment.createdAt);
       body.append('position', String(options.segment.order));
+      if (options.segment.creationSessionId) body.append('creationSessionId', options.segment.creationSessionId);
     }
     if (controller.signal.aborted) throw new Error('Upload cancelled.');
 

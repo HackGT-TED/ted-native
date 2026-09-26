@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from "react";
-import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Redirect, router, useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
   Keyboard,
@@ -15,6 +15,7 @@ import { RecordingTimelineItem } from "../components/recording/recording-timelin
 import { DraggableRecordingList } from "../components/recording/draggable-recording-list";
 import { useSegmentDrag } from "../hooks/use-segment-drag";
 import { StoryNameForm } from "../components/story-name-form";
+import { StoryActions } from "../components/story-actions";
 import { useStudio } from "../context/studio";
 import { useTimelinePlayback } from "../hooks/use-timeline-playback";
 import {
@@ -31,7 +32,12 @@ import type { FlatList } from "react-native-gesture-handler";
 import type { RecordingSegment } from "../types/recording";
 
 export default function Create() {
-  const { timeline, session, recorder } = useStudio();
+  const { storyOpen } = useStudio();
+  return storyOpen ? <StoryWorkspace /> : <Redirect href="/" />;
+}
+
+function StoryWorkspace() {
+  const { timeline, session, recorder, draft, autoRecord, consumeAutoRecord, stories } = useStudio();
   const audio = useTimelinePlayback();
   const { refresh, ready } = timeline;
   const { start, finish, phase, duration, error, permissionBlocked } = recorder;
@@ -39,6 +45,7 @@ export default function Create() {
   const scrollToLatest = useRef(false);
   const previousLastId = useRef<string | undefined>(undefined);
   const holding = useRef(false);
+  const [handsFree, setHandsFree] = useState(autoRecord);
   const capturing = phase === "starting" || phase === "recording";
   const finalizing = phase === "stopping" || phase === "saving";
   const fade = useSharedValue(1);
@@ -48,22 +55,30 @@ export default function Create() {
   const timelineStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
   const { stop } = audio;
   const dragState = useSegmentDrag(timeline.segments, session?.user.id ?? null,
-    ready && phase === "idle", timeline.move, stop);
-  const unavailable = !ready || finalizing || phase === "error" || dragState.dragging;
+    ready && phase === "idle" && !stories.saving, timeline.move, stop);
+  const unavailable = !ready || finalizing || phase === "error" || dragState.dragging || stories.saving;
   const begin = useCallback(() => {
-    if (holding.current || dragState.dragging || !ready || phase !== "idle") return;
+    if (holding.current || dragState.dragging || !ready || phase !== "idle" || stories.saving) return;
     holding.current = true;
     scrollToLatest.current = true;
     previousLastId.current = timeline.segments.at(-1)?.id;
     Keyboard.dismiss();
     stop();
     void start();
-  }, [dragState.dragging, phase, ready, start, stop, timeline.segments]);
+  }, [dragState.dragging, phase, ready, start, stop, stories.saving, timeline.segments]);
   const release = useCallback(() => {
     if (!holding.current) return;
     holding.current = false;
+    setHandsFree(false);
     void finish();
   }, [finish]);
+  useEffect(() => {
+    if (holding.current || !autoRecord || !ready || draft.loading || phase !== "idle" || stories.saving) return;
+    consumeAutoRecord();
+    holding.current = true;
+    scrollToLatest.current = true;
+    void start();
+  }, [autoRecord, consumeAutoRecord, draft.loading, phase, ready, start, stories.saving]);
   // Navigation, OS interruptions, and touch cancellation all finalize the take.
   useFocusEffect(useCallback(() => release, [release]));
   useEffect(() => {
@@ -130,7 +145,8 @@ export default function Create() {
           ListHeaderComponent={
             <View className="mb-7">
               <Heading>Create</Heading>
-              <StoryNameForm disabled={phase !== "idle"} />
+              <StoryNameForm disabled={phase !== "idle" || stories.saving} />
+              <StoryActions disabled={phase !== "idle" || dragState.dragging} />
               <Body className="mt-2">Your story, one moment at a time.</Body>
               <Body className="mt-1 !text-[12px]">
                 Hold to record. Release to add to your story.
@@ -190,7 +206,7 @@ export default function Create() {
               {timeline.guestCount > 0 && (
                 <Button
                   className="mt-4"
-                  title={`Add ${timeline.guestCount} device recording${timeline.guestCount === 1 ? "" : "s"} to my draft`}
+                  title={`Add ${timeline.guestCount} device recording${timeline.guestCount === 1 ? "" : "s"} to my account`}
                   secondary
                   onPress={timeline.claimGuestRecordings}
                 />
@@ -230,7 +246,7 @@ export default function Create() {
                 )}
                 <RecordingTimelineItem
                   recording={item}
-                  disabled={recorder.phase !== "idle" || dragState.dragging}
+                  disabled={recorder.phase !== "idle" || dragState.dragging || stories.saving}
                   playing={active && audio.playing}
                   loading={active && audio.loading}
                   progress={
@@ -286,21 +302,22 @@ export default function Create() {
           {/* Keep this control mounted and enabled throughout the hold. */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Hold to record a story moment"
-            accessibilityHint="Press and hold while speaking. Release to add the recording to your timeline."
+            accessibilityLabel={capturing && handsFree ? "Stop recording" : "Hold to record a story moment"}
+            accessibilityHint={capturing && handsFree ? "Tap to add this recording to your story." : "Press and hold while speaking. Release to add the recording to your timeline."}
             accessibilityState={{ disabled: unavailable, busy: finalizing }}
             disabled={unavailable}
-            onPressIn={begin}
-            onPressOut={release}
+            onPressIn={() => { if (!capturing) { setHandsFree(false); holding.current = false; begin(); } }}
+            onPress={() => { if (handsFree) release(); }}
+            onPressOut={() => { if (!handsFree) release(); }}
             // Touch end bypasses Pressable's minimum visual press duration.
-            onTouchEnd={release}
+            onTouchEnd={() => { if (!handsFree) release(); }}
             onTouchCancel={release}
             className={`h-24 w-24 items-center justify-center rounded-full border-[6px] ${capturing ? "border-line bg-rust" : "border-cream bg-cocoa"} ${unavailable ? "opacity-50" : ""}`}
           >
             {finalizing ? (
               <ActivityIndicator color={colors.paper} />
             ) : (
-              <Icon name="mic" size={34} color={colors.paper} />
+              <Icon name={capturing && handsFree ? "stop" : "mic"} size={34} color={colors.paper} />
             )}
           </Pressable>
           <View className="min-h-[100px] flex-1 justify-center">
@@ -333,7 +350,7 @@ export default function Create() {
             ) : null}
             <Text className="mt-1 text-[12px] leading-[18px] text-muted">
               {capturing
-                ? "Release to add to your story"
+                ? handsFree ? "Tap stop to add to your story" : "Release to add to your story"
                 : finalizing
                   ? "Finding its place in your timeline"
                   : !ready

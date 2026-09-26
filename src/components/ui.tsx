@@ -62,7 +62,7 @@ export function Label({ children, className = "" }: TypographyProps) {
 export function Heading({ children, className = "" }: TypographyProps) {
   return (
     <Text
-      className={`text-[30px] font-semibold leading-[38px] tracking-[-1px] text-ink ${className}`}
+      className={`font-heading text-[58px] font-normal leading-[46px] tracking-[-1px] text-ink ${className}`}
     >
       {children}
     </Text>

@@ -1,9 +1,10 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { useAuthSession } from '../hooks/use-auth-session';
 import { useRecordingSegments } from '../hooks/use-recording-segments';
 import { useAudioCapture } from '../hooks/use-audio-capture';
 import { useStoryDraft } from '../hooks/use-story-draft';
+import { useStories } from '../hooks/use-stories';
 export type Creation = {
   id: string;
   title: string;
@@ -44,6 +45,12 @@ export const originals: Creation[] = [{
   subtitle: 'Stories for taking your time'
 }];
 type Studio = {
+  storyId: string | null;
+  stories: ReturnType<typeof useStories>;
+  storyOpen: boolean;
+  autoRecord: boolean;
+  openStory: (id: string | null, record?: boolean) => void;
+  consumeAutoRecord: () => void;
   draft: ReturnType<typeof useStoryDraft>;
   timeline: ReturnType<typeof useRecordingSegments>;
   recorder: ReturnType<typeof useAudioCapture>;
@@ -65,12 +72,29 @@ export function StudioProvider({
   const { session, authLoading, authError } = useAuthSession();
   const displayName = session?.user.user_metadata.display_name;
   const name = session ? (typeof displayName === 'string' && displayName.trim() ? displayName.trim() : session.user.email?.split('@')[0] || 'Member') : '';
-  const timeline = useRecordingSegments(session?.user.id ?? null, authLoading);
-  const draft = useStoryDraft(session?.user.id ?? null, authLoading);
+  const [story, setStory] = useState<{ id: string | null; owner: string | null; autoRecord: boolean } | null>(null);
+  const owner = session?.user.id ?? null;
+  const currentStory = story?.owner === owner ? story : null;
+  const openStory = useCallback((id: string | null, record = false) => {
+    setStory({ id, owner, autoRecord: record });
+  }, [owner]);
+  const consumeAutoRecord = useCallback(() => {
+    setStory(current => current ? { ...current, autoRecord: false } : current);
+  }, []);
+  const timeline = useRecordingSegments(session?.user.id ?? null, authLoading, currentStory?.id ?? null);
+  const stories = useStories(owner, authLoading);
+  const savedStory = stories.items.find(item => item.creation_session_id === (currentStory?.id ?? null));
+  const draft = useStoryDraft(owner, authLoading, currentStory?.id ?? null, savedStory?.title);
   const recorder = useAudioCapture(timeline.addRecording);
   const [creations, setCreations] = useState(originals);
   const [saved, setSaved] = useState<string[]>([]);
   return <Context.Provider value={{
+    storyId: currentStory?.id ?? null,
+    stories,
+    storyOpen: Boolean(currentStory),
+    autoRecord: currentStory?.autoRecord ?? false,
+    openStory,
+    consumeAutoRecord,
     draft,
     timeline,
     recorder,

@@ -35,7 +35,7 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
   return <SafeAreaView className="flex-1 bg-paper" edges={['top', 'bottom']}>
     <Animated.View className="flex-1" style={chromeStyle} pointerEvents={immersive ? 'none' : 'auto'} accessibilityElementsHidden={immersive} importantForAccessibility={immersive ? 'no-hide-descendants' : 'auto'}>
     <Animated.View style={quietStyle} pointerEvents={quiet ? 'none' : 'auto'} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className={`h-[72px] flex-row items-center justify-between border-b border-line ${mobile ? "px-6" : "px-12"}`}>
-      <Pressable accessibilityRole="link" accessibilityLabel="TedTime Create" onPress={() => router.replace('/create')} className="min-h-11 flex-row items-center gap-[9px]">
+      <Pressable accessibilityRole="link" accessibilityLabel="TedTime home" onPress={() => router.replace('/')} className="min-h-11 flex-row items-center gap-[9px]">
         <View accessible={false} pointerEvents="none" className="h-[25px] w-[26px]">
           <View className="absolute left-px top-px h-[9px] w-[9px] rounded-[5px] bg-cocoa" /><View className="absolute right-px top-px h-[9px] w-[9px] rounded-[5px] bg-cocoa" />
           <View className="absolute left-px top-[5px] h-5 w-6 rounded-[10px] bg-cocoa">

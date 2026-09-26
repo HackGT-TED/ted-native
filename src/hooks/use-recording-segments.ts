@@ -9,7 +9,7 @@ import { mergeSegments, moveSegmentBefore, sortSegments } from '../utils/recordi
 
 const CACHE_KEY = 'tedtime.recording-segments.v1';
 
-export function useRecordingSegments(userId: string | null, authLoading: boolean) {
+export function useRecordingSegments(userId: string | null, authLoading: boolean, projectId: string | null = null) {
   const [all, setAll] = useState<RecordingSegment[]>([]);
   const allRef = useRef(all);
   const [loaded, setLoaded] = useState(false);
@@ -79,7 +79,7 @@ export function useRecordingSegments(userId: string | null, authLoading: boolean
       for (let offset = 0; ; offset += 500) {
         const { data, error: queryError } = await supabase.from('recording_segments')
           .select('id,user_id,creation_session_id,storage_path,title,recorded_at,duration_ms,position,deleted_at')
-          .eq('user_id', userId).is('creation_session_id', null)
+          .eq('user_id', userId)
           .order('position').order('id').range(offset, offset + 499);
         if (queryError) throw queryError;
         for (const row of (data ?? []) as RecordingRow[]) remote.push({
@@ -124,7 +124,7 @@ export function useRecordingSegments(userId: string | null, authLoading: boolean
       try { await preserveRecordingFile(id, uri); } catch { /* Still attempt the upload. */ }
       const result = await uploadRecording({ uri, title: segment.title, duration: segment.durationMs }, {
         signal: controller.signal,
-        segment: { id, createdAt: segment.createdAt, order: segment.order, userId: segment.userId },
+        segment: { id, createdAt: segment.createdAt, order: segment.order, userId: segment.userId, creationSessionId: segment.creationSessionId },
       });
       patch({ status: 'uploaded', storagePath: result.path, localUri: uri });
     } catch (cause) {
@@ -171,7 +171,7 @@ export function useRecordingSegments(userId: string | null, authLoading: boolean
 
   const move = useCallback((id: string, beforeId: string | null) => {
     const owner = activeUser.current;
-    const current = sortSegments(allRef.current.filter(item => !item.deletedAt && item.userId === owner && item.creationSessionId === null));
+    const current = sortSegments(allRef.current.filter(item => !item.deletedAt && item.userId === owner && item.creationSessionId === projectId));
     const reordered = moveSegmentBefore(current, id, beforeId);
     if (reordered === current) return;
     const positions = new Map(reordered.map(item => [item.id, item.order]));
@@ -182,7 +182,7 @@ export function useRecordingSegments(userId: string | null, authLoading: boolean
       return { ...item, order, changeError: undefined,
         pendingChange: item.userId ? (item.pendingChange === 'rename' || item.pendingChange === 'edit' ? 'edit' as const : 'reorder' as const) : undefined };
     })));
-  }, [commit]);
+  }, [commit, projectId]);
 
   const remove = useCallback((id: string) => {
     const segment = allRef.current.find(item => item.id === id);
@@ -204,7 +204,7 @@ export function useRecordingSegments(userId: string | null, authLoading: boolean
     const createdAt = recording.recordedAt ?? new Date().toISOString();
     const lastOrder = allRef.current.filter(item => item.userId === userId).reduce((max, item) => Math.max(max, item.order), 0);
     const segment: RecordingSegment = {
-      id, userId, creationSessionId: null, localUri: recording.uri,
+      id, userId, creationSessionId: projectId, localUri: recording.uri,
       title: recording.title || 'A story moment', createdAt, durationMs: recording.duration,
       order: Math.max(Date.parse(createdAt), lastOrder + 1), status: 'local',
     };
@@ -219,7 +219,7 @@ export function useRecordingSegments(userId: string | null, authLoading: boolean
       // A new array wakes the upload effect after local file persistence.
       commit(items => [...items]);
     }
-  }, [commit, userId]);
+  }, [commit, projectId, userId]);
 
   const retry = useCallback(async (id: string) => {
     const segment = allRef.current.find(item => item.id === id);
@@ -238,8 +238,24 @@ export function useRecordingSegments(userId: string | null, authLoading: boolean
     commit(items => items.map(item => !item.deletedAt && item.userId === null ? { ...item, userId, status: 'local', error: undefined } : item));
   }, [commit, userId]);
 
+  const projectMap = new Map<string | null, { id: string | null; createdAt: string; moments: number }>();
+  for (const segment of all) {
+    if (segment.deletedAt || segment.userId !== userId) continue;
+    const project = projectMap.get(segment.creationSessionId);
+    if (project) {
+      project.moments++;
+      if (segment.createdAt < project.createdAt) project.createdAt = segment.createdAt;
+    } else {
+      projectMap.set(segment.creationSessionId, { id: segment.creationSessionId, createdAt: segment.createdAt, moments: 1 });
+    }
+  }
+  const projects = [...projectMap.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
   return {
-    segments: all.filter(item => !item.deletedAt && item.userId === userId && item.creationSessionId === null),
+    projects,
+    syncPending: all.some(item => item.userId === userId && item.creationSessionId === projectId
+      && (item.pendingChange || (!item.deletedAt && (!item.storagePath || item.status === 'uploading')))),
+    segments: all.filter(item => !item.deletedAt && item.userId === userId && item.creationSessionId === projectId),
     guestCount: userId ? all.filter(item => !item.deletedAt && item.userId === null).length : 0,
     claimGuestRecordings, addRecording, retry, refresh, rename, remove, move,
     deletionSyncError: all.some(item => item.userId === userId && item.deletedAt && item.changeError),

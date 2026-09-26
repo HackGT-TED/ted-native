@@ -223,3 +223,13 @@ test('invalid segment identities and ordering cannot reach storage', async () =>
     assert.equal(h.uploads.length, 0);
   }
 });
+
+
+test('story project identity is validated and retained with uploaded recordings', async () => {
+  const h = setup();
+  const creationSessionId = 'aa222222-2222-4222-8222-222222222222';
+  assert.equal((await h.post(request({ creationSessionId }))).status, 201);
+  assert.equal(h.rows[0].row.creation_session_id, creationSessionId);
+  assert.equal((await h.post(request({ creationSessionId: 'bad-id' }))).status, 400);
+  assert.equal(h.uploads.length, 1);
+});

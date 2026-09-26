@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { load, harness } = require('./hook-harness.cjs');
 
-function setup() {
+function setup(options = {}) {
   const hooks = harness();
   const calls = [];
   const recorder = {
@@ -11,30 +11,32 @@ function setup() {
     finish() { calls.push('finish'); recorder.phase = 'stopping'; },
   };
   const timeline = { ready: true, segments: [], refresh() {}, loading: false };
+  const studio = { recorder, timeline, stories: { saving: false }, storyOpen: options.storyOpen ?? true, autoRecord: options.autoRecord ?? false, draft: { loading: false }, consumeAutoRecord() { studio.autoRecord = false; } };
   const playback = { stop() { calls.push('pause playback'); }, toggle() {} };
   const module = load('src/app/create.tsx', {
     react: hooks.react,
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     'react-native': { Keyboard: { dismiss() {} }, Platform: { OS: 'ios' }, ...Object.fromEntries(['ActivityIndicator', 'FlatList', 'Pressable', 'Text', 'View'].map(name => [name, name])) },
-    'expo-router': { router: {}, useFocusEffect: fn => hooks.react.useEffect(fn, [fn]) },
+    'expo-router': { Redirect: 'Redirect', router: {}, useFocusEffect: fn => hooks.react.useEffect(fn, [fn]) },
     'react-native-reanimated': { default: { View: 'AnimatedView' },
       useSharedValue: initial => hooks.react.useRef({ value: initial }).current,
       useAnimatedStyle: fn => fn(), withTiming: value => value },
     '../components/recording/draggable-recording-list': { DraggableRecordingList: 'DraggableRecordingList' },
     '../hooks/use-segment-drag': { useSegmentDrag: segments => ({ data: segments, dragging: false, generation: 0 }) },
     '../components/story-name-form': { StoryNameForm: 'StoryNameForm' },
+    '../components/story-actions': { StoryActions: 'StoryActions' },
     '../components/shell': { Shell: 'Shell' },
     '../components/ui': { Body: 'Body', Button: 'Button', Heading: 'Heading', Icon: 'Icon', colors: {} },
     '../components/recording/recording-timeline-item': { RecordingTimelineItem: 'TimelineItem' },
-    '../context/studio': { useStudio: () => ({ recorder, timeline }) },
+    '../context/studio': { useStudio: () => studio },
     '../hooks/use-timeline-playback': { useTimelinePlayback: () => playback },
     '../utils/recordings': load('src/utils/recordings.ts', {}),
   });
   const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node)
     ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
   const h = { calls, recorder, timeline,
-    render() { h.tree = hooks.render(module.default); return h; },
-    button() { return nodes(h.tree).find(node => node.props?.accessibilityLabel === 'Hold to record a story moment').props; },
+    render() { h.tree = hooks.render(() => { const page = module.default(); return typeof page.type === 'function' ? page.type() : page; }); return h; },
+    button() { return nodes(h.tree).find(node => ['Hold to record a story moment', 'Stop recording'].includes(node.props?.accessibilityLabel)).props; },
     unmount: hooks.unmount,
   };
   return h.render();
@@ -81,4 +83,29 @@ test('capture is unavailable until the stored timeline is ready', () => {
   assert.equal(h.button().disabled, true);
   h.button().onPressIn();
   assert.deepEqual(h.calls, []);
+});
+
+
+test('a clean reload redirects the workspace to the welcome page', () => {
+  const h = setup({ storyOpen: false });
+  assert.equal(h.tree.type, 'Redirect');
+  assert.equal(h.tree.props.href, '/');
+  assert.deepEqual(h.calls, []);
+});
+
+test('welcome starts one hands-free take and tapping stop saves it once', () => {
+  const h = setup({ autoRecord: true });
+  h.render();
+  assert.deepEqual(h.calls, ['start']);
+  h.recorder.phase = 'recording'; h.render();
+  assert.equal(h.button().accessibilityLabel, 'Stop recording');
+  h.button().onPressIn();
+  h.button().onTouchEnd();
+  h.button().onPressOut();
+  assert.deepEqual(h.calls, ['start']);
+  h.button().onPress(); h.render();
+  assert.deepEqual(h.calls, ['start', 'finish']);
+  h.recorder.phase = 'idle'; h.render();
+  assert.equal(h.button().accessibilityLabel, 'Hold to record a story moment');
+  assert.deepEqual(h.calls, ['start', 'finish']);
 });

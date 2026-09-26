@@ -160,6 +160,11 @@ export async function POST(request: Request): Promise<Response> {
       return error("durationMs must be a positive integer.", 400);
     }
 
+    const creationSessionId = form.get('creationSessionId');
+    if (creationSessionId !== null && (typeof creationSessionId !== 'string'
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(creationSessionId))) {
+      return error('Invalid story project identity.', 400);
+    }
     const durationMs = Number(duration);
     const id = form.get('id') ?? crypto.randomUUID();
     const recordedAt = form.get('recordedAt') ?? new Date().toISOString();
@@ -182,7 +187,7 @@ export async function POST(request: Request): Promise<Response> {
     const duplicate = storageError && (storageError.statusCode === '409' || storageError.message === 'The resource already exists');
     if ((storageError && !duplicate) || (!data && !duplicate)) return storageFailure(storageError);
     const { error: metadataError } = await supabase.from('recording_segments').upsert({
-      id, user_id: auth.user.id, creation_session_id: null, storage_path: path,
+      id, user_id: auth.user.id, creation_session_id: creationSessionId, storage_path: path,
       title: title.trim(), recorded_at: new Date(recordedAt).toISOString(),
       duration_ms: durationMs, position: Number(position),
     }, { onConflict: 'user_id,id', ignoreDuplicates: true });
