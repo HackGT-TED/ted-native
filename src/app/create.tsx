@@ -17,6 +17,7 @@ import { useSegmentDrag } from "../hooks/use-segment-drag";
 import { StoryNameForm } from "../components/story-name-form";
 import { StoryCoverPicker } from "../components/story-cover-picker";
 import { StoryActions } from "../components/story-actions";
+import { ContinueReading } from "../components/read-along/continue-reading";
 import { useStudio } from "../context/studio";
 import { useTimelinePlayback } from "../hooks/use-timeline-playback";
 import {
@@ -221,6 +222,7 @@ function StoryWorkspace() {
               <Heading>Create</Heading>
               <StoryCoverPicker disabled={phase !== "idle" || stories.saving} />
               <StoryNameForm disabled={phase !== "idle" || stories.saving} />
+              <ContinueReading disabled={phase !== "idle"} />
               <StoryActions disabled={phase !== "idle" || dragState.dragging} />
 
               {timeline.segments.length > 1 && (

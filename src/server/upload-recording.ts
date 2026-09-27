@@ -9,6 +9,12 @@ const AUDIO_TYPES: Record<string, string> = {
   "audio/m4a": "m4a",
   "audio/webm": "webm",
   "audio/ogg": "ogg",
+  // Read-along clips are the 16 kHz PCM streamed to speech recognition, saved as WAV.
+  // Platforms name the type differently, so all variants are stored as audio/wav.
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/wave": "wav",
+  "audio/vnd.wave": "wav",
 };
 
 function error(message: string, status: number, code?: string) {
@@ -143,7 +149,7 @@ export async function POST(request: Request): Promise<Response> {
     const contentType = audio.type.split(";")[0].trim().toLowerCase();
     const extension = AUDIO_TYPES[contentType];
     if (!extension)
-      return error("Upload an M4A, WebM, or Ogg audio recording.", 415);
+      return error("Upload an M4A, WebM, Ogg, or WAV audio recording.", 415);
     if (
       typeof title !== "string" ||
       !title.trim() ||
@@ -178,7 +184,7 @@ export async function POST(request: Request): Promise<Response> {
     const { data, error: storageError } = await supabase.storage
       .from(BUCKET)
       .upload(path, await audio.arrayBuffer(), {
-        contentType,
+        contentType: extension === "wav" ? "audio/wav" : contentType,
         upsert: false,
         metadata: { title: title.trim(), durationMs, recordedAt, position: Number(position), segmentId: id },
       });

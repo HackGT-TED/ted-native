@@ -58,26 +58,52 @@ const HOMOPHONES = [
 ].reduce((map, group) => { for (const word of group) map.set(word, group[0]); return map; }, new Map<string, string>());
 const sound = (key: string) => HOMOPHONES.get(key) ?? key;
 
+const VOWELS = /[aeiouy]/;
+
+/** "gray"/"grey", "colour"/"color": spellings that differ in a single vowel. */
+function vowelVariant(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let differences = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === b[i]) continue;
+    if (!VOWELS.test(a[i]) || !VOWELS.test(b[i]) || ++differences > 1) return false;
+  }
+  return differences === 1;
+}
+
 /**
- * Words up to four letters must match exactly (or as homophones), so "pear" never
- * passes for "bear"; longer ones tolerate about one recognition error per four letters.
+ * Short words must match exactly, as homophones, or as one-vowel spelling variants
+ * ("gray"/"grey"), so "pear" never passes for "bear"; words of five or more letters
+ * tolerate about one recognition error per four letters.
  */
 export function wordsMatch(spoken: string, expected: string): boolean {
   if (sound(spoken) === sound(expected)) return true;
+  if (Math.min(spoken.length, expected.length) >= 4 && vowelVariant(spoken, expected)) return true;
   if (Math.min(spoken.length, expected.length) <= 4) return false;
   return 1 - distance(spoken, expected) / Math.max(spoken.length, expected.length) >= 0.75;
 }
 
 /**
- * Advances through the script with the recognized words, starting at `start`
- * (the index of the next expected word). The position only moves when the
- * expected word is heard: wrong words, filler, and backtracking are ignored, so
- * saying "three" where the script says "to" never jumps ahead to a later "three".
- * The one exception is reading on past a misheard word, which is followed.
+ * `position` is the index of the next expected word. `unmatched` holds the words
+ * heard since the last one that moved the position, so a recovery can still use
+ * them when the rest of the phrase arrives in Deepgram's next result.
  */
-export function alignSpokenWords(words: ScriptWord[], spoken: string[], start: number): number {
+export type Alignment = { position: number; unmatched: string[] };
+
+// How many script words past the expected one to look for the reader carrying on.
+const MAX_GAP = 3;
+
+/**
+ * Advances through the script with the recognized words, starting at `start`
+ * (the index of the next expected word). A wrong word, filler, or backtracking never
+ * moves the position, so saying "three" where the script says "to" doesn't jump to a
+ * later "three". But when the reader carries on and the next few words match, the
+ * position follows them past words that were misheard, misread, or skipped.
+ */
+export function alignSpokenWords(words: ScriptWord[], spoken: string[], start: number): Alignment {
   const keys = spoken.map(normalizeWord).filter(Boolean);
   let position = Math.max(0, Math.min(start, words.length));
+  let lastMove = 0;
   for (let i = 0; i < keys.length && position < words.length; i++) {
     const expected = words[position].key;
     if (wordsMatch(keys[i], expected)) {
@@ -90,30 +116,33 @@ export function alignSpokenWords(words: ScriptWord[], spoken: string[], start: n
       // The recognizer joined two words into one ("everyone" for "every one").
       position += 2;
     } else {
-      // The expected word was misheard (or misread) but the reader carried on: once the
-      // following words are heard in order, move past it instead of stalling. A single
-      // wrong word never qualifies, and backtracking says earlier words, not these.
-      const run = carriedOn(words, keys, position + 1, i);
-      if (run) {
-        position += 1 + run;
-        i += run - 1;
-      }
+      const recovery = carriedOn(words, keys, position, i);
+      if (!recovery) continue;
+      position = recovery.position;
+      i += recovery.heard - 1;
     }
+    lastMove = i + 1;
   }
-  return position;
+  return { position, unmatched: keys.slice(lastMove) };
 }
 
-const distinctive = (key: string) => key.length >= 4 && !STOPWORDS.has(key);
+const distinctive = (key: string | undefined) => !!key && key.length >= 4 && !STOPWORDS.has(key);
 
 /**
- * How many words starting at `from` were heard in order from `keys[i]`: 2 when one
- * of them is distinctive, 3 for common pairs like "of the", otherwise 0.
+ * Whether the words from `keys[i]` match the script a little past `position`: two in a
+ * row right after the expected word when one of them is distinctive, otherwise three
+ * (common pairs like "of the" appear everywhere). Backtracking says earlier words, so
+ * it can't qualify, and a single wrong word never does.
  */
-function carriedOn(words: ScriptWord[], keys: string[], from: number, i: number): number {
-  const heard = (n: number) => from + n <= words.length && i + n <= keys.length
+function carriedOn(words: ScriptWord[], keys: string[], position: number, i: number) {
+  const heard = (from: number, n: number) => from + n <= words.length && i + n <= keys.length
     && Array.from({ length: n }, (_, k) => wordsMatch(keys[i + k], words[from + k].key)).every(Boolean);
-  if (heard(2) && (distinctive(words[from].key) || distinctive(words[from + 1].key))) return 2;
-  return heard(3) ? 3 : 0;
+  for (let gap = 1; gap <= MAX_GAP; gap++) {
+    const from = position + gap;
+    const needed = gap === 1 && (distinctive(words[from]?.key) || distinctive(words[from + 1]?.key)) ? 2 : 3;
+    if (heard(from, needed)) return { position: from + needed, heard: needed };
+  }
+  return null;
 }
 
 /** Rare words (names, long words) to pass to Deepgram as keyterms so they are recognized. */

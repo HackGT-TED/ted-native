@@ -15,7 +15,7 @@ function load(path, context = {}) {
 
 const { tokenizeScript, alignSpokenWords, normalizeWord, scriptKeyterms } = load('src/utils/read-along.ts');
 const script = tokenizeScript('Once upon a time, a little bear named Tedward counted the stars — one, two, 3! Then the bear slept.');
-const read = (spoken, start = 0) => alignSpokenWords(script, spoken.split(' '), start);
+const read = (spoken, start = 0) => alignSpokenWords(script, spoken.split(' '), start).position;
 const at = index => script[index].key;
 
 test('tokenizes words, folds stray punctuation into a neighbor, and normalizes numbers', () => {
@@ -47,8 +47,30 @@ test('reading on past a misheard word moves past it once the next words are hear
   assert.equal(read('lyrical bear named', 5), 8);
   // Common pairs like "in the" need a third word before moving on.
   const chair = tokenizeScript('He sat in the big chair.');
-  assert.equal(alignSpokenWords(chair, ['he', 'sad', 'in', 'the'], 0), 1);
-  assert.equal(alignSpokenWords(chair, ['he', 'sad', 'in', 'the', 'big'], 0), 5);
+  assert.equal(alignSpokenWords(chair, ['he', 'sad', 'in', 'the'], 0).position, 1);
+  assert.equal(alignSpokenWords(chair, ['he', 'sad', 'in', 'the', 'big'], 0).position, 5);
+});
+
+test('keeps going past several misheard or skipped words once the reader is clearly on track', () => {
+  // "little bear" both misheard, then "named tedward counted" lines up.
+  assert.equal(read('a lyrical pair named tedward counted', 4), 10);
+  // Skipped "little" entirely.
+  assert.equal(read('a bear named', 4), 8);
+});
+
+test('spelling variants that differ in one vowel match', () => {
+  const pebble = tokenizeScript('A smooth grey pebble.');
+  assert.equal(alignSpokenWords(pebble, ['a', 'smooth', 'gray', 'pebble'], 0).position, 4);
+  assert.equal(read('pear', 6), 6); // A consonant change is still a different word.
+});
+
+test('unmatched words are returned so recovery works across Deepgram results', () => {
+  // A final result ends after the misheard word and one word of the continuation...
+  const first = alignSpokenWords(script, ['a', 'lyrical', 'bear'], 4);
+  assert.equal(first.position, 5);
+  assert.deepEqual([...first.unmatched], ['lyrical', 'bear']);
+  // ...and the next result, with those words carried in front, completes the recovery.
+  assert.equal(alignSpokenWords(script, [...first.unmatched, 'named'], first.position).position, 8);
 });
 
 test('backtracking is ignored until the expected word is heard', () => {
@@ -69,7 +91,7 @@ test('homophones count as the expected word', () => {
 
 test('handles the recognizer splitting or joining words', () => {
   assert.equal(read('ted ward counted', 8), 10);
-  assert.equal(alignSpokenWords(tokenizeScript('Every one smiled.'), ['everyone', 'smiled'], 0), 3);
+  assert.equal(alignSpokenWords(tokenizeScript('Every one smiled.'), ['everyone', 'smiled'], 0).position, 3);
 });
 
 test('tolerates small recognition errors in longer words but not short ones', () => {
