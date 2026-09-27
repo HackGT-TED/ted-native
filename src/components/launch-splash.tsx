@@ -33,7 +33,6 @@ export function LaunchSplash({ onFinish }: { onFinish: () => void }) {
 
   return (
     <Animated.View
-      pointerEvents="auto"
       style={veilStyle}
       className="absolute inset-0 z-50 items-center justify-center bg-paper"
     >

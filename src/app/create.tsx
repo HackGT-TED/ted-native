@@ -110,7 +110,7 @@ function StoryWorkspace() {
   return (
     <Shell scroll={false} quiet={capturing}>
       <View className="w-full max-w-[480px] self-center pt-6">
-        <Heading>Create</Heading>
+        <Heading className="!text-[42px] !leading-[44px]">Create</Heading>
         <CreateModeSwitch mode="voice" disabled={phase !== "idle" || stories.saving} />
         <StoryNameForm disabled={phase !== "idle" || stories.saving} />
         <Pressable

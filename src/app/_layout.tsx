@@ -4,12 +4,14 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, LogBox, Platform, View } from 'react-native';
 import { StudioProvider } from '../context/studio';
 import { colors } from '../components/ui';
 import { LaunchSplash } from '../components/launch-splash';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+// JSX line breaks become text nodes inside Views on web. They are not user-facing failures.
+LogBox.ignoreLogs(['Unexpected text node:']);
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {

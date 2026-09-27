@@ -60,8 +60,7 @@ export default function Welcome() {
   return (
     <Shell>
       <View className="w-full max-w-[480px] self-center pb-8 pt-8">
-        <Label>TEDTIME</Label>
-        <Text accessibilityRole="header" className="mt-4 font-heading text-[42px] font-normal leading-[46px] tracking-[-1.2px] text-ink">
+        <Text accessibilityRole="header" className="font-heading text-[42px] font-normal leading-[46px] tracking-[-1.2px] text-ink">
           What do you want to make?
         </Text>
         <Body className="mt-3 max-w-[340px]">Record a voice story, or write one to share.</Body>

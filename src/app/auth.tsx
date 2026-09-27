@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { cssInterop } from 'nativewind';
-import { ActivityIndicator, Animated, BackHandler, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Text, useAnimatedValue, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Animated, BackHandler, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, colors, Heading, Icon } from '../components/ui';
 import Auth from '../components/Auth';
@@ -15,8 +15,8 @@ cssInterop(AnimatedKeyboardAvoidingView, { className: 'style' });
 export default function AuthScreen() {
   const { session, authLoading, authError, name } = useStudio();
   const { height } = useWindowDimensions();
-  const progress = useAnimatedValue(0);
-  const dragY = useAnimatedValue(0);
+  const [progress] = useState(() => new Animated.Value(0));
+  const [dragY] = useState(() => new Animated.Value(0));
   const closing = useRef(false);
 
   useEffect(() => {
