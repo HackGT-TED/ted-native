@@ -158,7 +158,7 @@ export function StoryActions({ disabled }: { disabled: boolean }) {
       <View className="min-h-11 flex-row items-center justify-center self-center gap-3">
         <Text
           nativeID="community-switch-label"
-          className="shrink text-center text-[13px] leading-5 text-ink"
+          className="shrink text-center text-[13px] font-bold leading-5 text-ink"
           style={{ includeFontPadding: false, textAlignVertical: "center" }}
         >
           Make Public

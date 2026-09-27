@@ -38,7 +38,7 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
         <Icon name={link.icon} size={22} color={selected ? colors.ink : colors.muted} />
         {badge ? <View className="absolute -right-1.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-paper bg-rust" /> : null}
       </View>}
-      <Text className={`${selected ? "font-semibold text-ink" : "text-muted"} ${mobile ? "text-[11px]" : "text-[13px]"}`}>{link.title}</Text>
+      <Text className={`${selected ? "text-ink" : "text-muted"} ${mobile ? "font-heading text-[15px]" : "text-[13px]"} ${selected && !mobile ? "font-semibold" : ""}`}>{link.title}</Text>
       {!mobile && badge ? <View className="h-2 w-2 rounded-full bg-rust" /> : null}
     </Pressable>;
   });
@@ -54,7 +54,8 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
             <View className="absolute left-2.5 top-3 h-[3px] w-1 rounded-[2px] bg-paper" />
           </View>
         </View>
-        <Text className="text-[23px] font-bold tracking-[-1.1px] text-ink">tedtime<Text className="text-honey">.</Text></Text>
+        <Text className="text-[23px] font-bold leading-[25px] tracking-[-1.1px] text-ink"
+          style={{ includeFontPadding: false, textAlignVertical: 'center' }}>tedtime<Text className="text-honey">.</Text></Text>
       </Pressable>
       {!mobile && <View className="flex-row gap-6">{navigation}</View>}
       <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account' : 'Sign in'} onPress={() => router.push(name ? '/account' : '/auth')} className="min-h-11 min-w-11 items-center justify-center gap-1">

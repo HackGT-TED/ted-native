@@ -426,15 +426,6 @@ function StoryWorkspace() {
                 {formatDuration(duration)}
               </Text>
             ) : null}
-            <Text className="mt-1 text-[12px] leading-[18px] text-muted">
-              {capturing
-                ? "Tap stop to add to your story"
-                : finalizing
-                  ? "Adding it to your story"
-                  : !ready
-                    ? "Opening your moments…"
-                    : "Each recording adds a new moment."}
-            </Text>
           </View>
         </View>
         {error && (
