@@ -18,11 +18,14 @@ test('Family lists stories sent to you and refreshes each visit', () => {
     'expo-router': { useFocusEffect: fn => hooks.react.useEffect(fn, [fn]) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'Text', View: 'View' },
     '../components/shell': { Shell: 'Shell' }, '../components/inbox-list': { InboxList: 'InboxList' },
+    '../components/family-card': { FamilyCard: 'FamilyCard' },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading' },
-    '../context/studio': { useStudio: () => ({ inbox: { items, unheard: 1, loading: false, error: '', refresh: async () => { refreshed++; } } }) },
+    '../context/studio': { useStudio: () => ({ inbox: { items, unheard: 1, loading: false, error: '', refresh: async () => { refreshed++; } },
+      family: { refresh: async () => { refreshed++; } } }) },
   });
   const tree = hooks.render(module.default);
-  assert.equal(refreshed, 1);
+  assert.equal(refreshed, 2, 'both the inbox and the family refresh');
+  assert.ok(nodes(tree).some(n => n.type === 'FamilyCard'), 'the family card is at the top');
   assert.equal(nodes(tree).find(n => n.type === 'InboxList').props.items[0].title, 'The Dragon');
   assert.match(JSON.stringify(tree), /\[1," new"\]/);
 });
@@ -34,8 +37,10 @@ test('Family explains itself when nothing has been sent', () => {
     'expo-router': { useFocusEffect: () => {} },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'Text', View: 'View' },
     '../components/shell': { Shell: 'Shell' }, '../components/inbox-list': { InboxList: 'InboxList' },
+    '../components/family-card': { FamilyCard: 'FamilyCard' },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading' },
-    '../context/studio': { useStudio: () => ({ inbox: { items: [], unheard: 0, loading: false, error: '', refresh: async () => {} } }) },
+    '../context/studio': { useStudio: () => ({ inbox: { items: [], unheard: 0, loading: false, error: '', refresh: async () => {} },
+      family: { refresh: async () => {} } }) },
   });
   assert.match(JSON.stringify(hooks.render(module.default)), /No stories yet/);
 });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useStudio } from '../context/studio';
 import { personName, searchPeople, type Person } from '../services/story-shares';
 import { colors, Icon } from './ui';
 
@@ -7,6 +8,7 @@ import { colors, Icon } from './ui';
 export function StoryRecipients({ selected, onChange, disabled = false }: {
   selected: Person[]; onChange: (people: Person[]) => void; disabled?: boolean;
 }) {
+  const { family } = useStudio();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Person[]>([]);
   const [searching, setSearching] = useState(false);
@@ -37,9 +39,31 @@ export function StoryRecipients({ selected, onChange, disabled = false }: {
   };
   const chosen = new Set(selected.map(person => person.id));
   const matches = results.filter(person => !chosen.has(person.id));
+  // Family members are one tap away; everyone else is found by search.
+  const relatives: Person[] = (family.family?.members ?? [])
+    .filter(member => !member.is_me && !chosen.has(member.id))
+    .map(({ id, username, full_name }) => ({ id, username, full_name }));
 
   return <View className="gap-2">
     <Text nativeID="send-to-label" className="text-[13px] text-ink">Send to family & friends</Text>
+    {relatives.length ? <View className="gap-1.5">
+      <View className="flex-row items-center justify-between">
+        <Text className="text-[11px] text-muted">{family.family?.name}</Text>
+        {relatives.length > 1 ? <Pressable accessibilityRole="button" disabled={disabled}
+          onPress={() => onChange([...selected, ...relatives])} className="min-h-9 justify-center pl-3">
+          <Text className="text-[12px] font-medium text-cocoa">Send to everyone</Text>
+        </Pressable> : null}
+      </View>
+      <View className="flex-row flex-wrap gap-2">
+        {relatives.map(person => <Pressable key={person.id} accessibilityRole="button"
+          accessibilityLabel={`Send to ${personName(person)}`} disabled={disabled}
+          onPress={() => onChange([...selected, person])}
+          className="min-h-9 flex-row items-center gap-1 rounded-full border border-line bg-cream pl-2.5 pr-3.5">
+          <Text className="text-[15px] text-cocoa">+</Text>
+          <Text className="text-[13px] text-ink">{personName(person)}</Text>
+        </Pressable>)}
+      </View>
+    </View> : null}
     {selected.length ? <View className="flex-row flex-wrap gap-2">
       {selected.map(person => <Pressable key={person.id} accessibilityRole="button"
         accessibilityLabel={`Remove ${personName(person)}`} disabled={disabled}
