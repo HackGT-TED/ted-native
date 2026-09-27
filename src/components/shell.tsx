@@ -35,7 +35,7 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
   const content = <View className={`w-full max-w-[1000px] self-center ${scroll ? "" : "min-h-0 flex-1"} ${mobile ? "px-6" : "px-12"}`}>{children}</View>;
   return <SafeAreaView className="flex-1 bg-paper" edges={['top', 'bottom']}>
     <Animated.View className="min-h-0 flex-1" style={[chromeStyle, { pointerEvents: immersive ? 'none' : 'auto' }]} accessibilityElementsHidden={immersive} importantForAccessibility={immersive ? 'no-hide-descendants' : 'auto'}>
-    {scroll ? <ScrollView showsVerticalScrollIndicator={false} className="scrollbar-none min-h-0 flex-1" keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9">{content}</ScrollView> : content}
+    {scroll ? <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, minHeight: 0 }} keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9">{content}</ScrollView> : content}
     <Animated.View style={[quietStyle, { pointerEvents: quiet ? 'none' : 'auto' }]} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className="flex-row border-t border-line pb-[7px] pt-2.5">
       {navigation}
       <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account settings' : 'Sign in'} onPress={() => router.push('/auth')} className="min-h-11 flex-1 items-center justify-center gap-[5px]">

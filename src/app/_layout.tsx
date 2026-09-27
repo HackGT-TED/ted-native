@@ -4,15 +4,28 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { ActivityIndicator, LogBox, Platform, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { StudioProvider } from '../context/studio';
 import { colors } from '../components/ui';
 import { LaunchSplash } from '../components/launch-splash';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// JSX line breaks become text nodes inside Views on web. They are not user-facing failures.
-LogBox.ignoreLogs(['Unexpected text node:']);
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const originalError = console.error.bind(console);
+  console.error = (...args: unknown[]) => {
+    // JSX indentation becomes a text child on web. It is not a failed screen.
+    if (typeof args[0] === 'string' && args[0].includes('Unexpected text node')) return;
+    originalError(...args);
+  };
+  if (!document.getElementById('tedtime-hide-scrollbars')) {
+    const style = document.createElement('style');
+    style.id = 'tedtime-hide-scrollbars';
+    style.textContent = '*{scrollbar-width:none !important} *::-webkit-scrollbar{width:0 !important;height:0 !important;display:none !important}';
+    document.head.appendChild(style);
+  }
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
