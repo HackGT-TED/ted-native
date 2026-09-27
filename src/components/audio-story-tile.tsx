@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
-import type { MarketplaceStory } from '../hooks/use-marketplace-stories';
+import type { CommunityStory } from '../hooks/use-community-stories';
 import { colors, Icon } from './ui';
 
 const tints = ['#E4CDB0', '#EEDFCB', '#DBC4A6', '#E7CBBB', colors.cream];
@@ -20,7 +20,7 @@ export function formatPublished(value: string | null) {
 }
 
 type Props = {
-  story: MarketplaceStory;
+  story: CommunityStory;
   /** The viewer recorded this story: show "Yours" instead of a save button. */
   own: boolean;
   saved: boolean;

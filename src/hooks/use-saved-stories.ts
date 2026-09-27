@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  marketplaceFields, signCovers, toMarketplaceStory,
-  type MarketplaceRow, type MarketplaceStory,
-} from './use-marketplace-stories';
+  communityFields, signCovers, toCommunityStory,
+  type CommunityRow, type CommunityStory,
+} from './use-community-stories';
 
-type State = { owner: string | null; items: MarketplaceStory[]; loading: boolean; error: string };
+type State = { owner: string | null; items: CommunityStory[]; loading: boolean; error: string };
 
-/** The signed-in user's saved marketplace stories (saved_stories), newest save first. */
+/** The signed-in user's saved community stories (saved_stories), newest save first. */
 export function useSavedStories(userId: string | null, authLoading: boolean) {
   const [state, setState] = useState<State>({ owner: null, items: [], loading: false, error: '' });
   const [pending, setPending] = useState<string[]>([]);
@@ -20,17 +20,17 @@ export function useSavedStories(userId: string | null, authLoading: boolean) {
     try {
       if (!supabase) throw new Error('Account storage is unavailable.');
       const { data, error } = await supabase.from('saved_stories')
-        .select(`created_at, story:all_stories(${marketplaceFields})`)
+        .select(`created_at, story:all_stories(${communityFields})`)
         .eq('user_id', userId).order('created_at', { ascending: false }).limit(200);
       if (error) throw error;
-      // A story its author took off the marketplace comes back as null. The user's own
+      // A story its author took off the community comes back as null. The user's own
       // stories already live in their Library sections, so they are never "saved".
-      const rows = ((data ?? []) as unknown as { story: MarketplaceRow | null }[])
+      const rows = ((data ?? []) as unknown as { story: CommunityRow | null }[])
         .map(row => row.story)
-        .filter((story): story is MarketplaceRow => Boolean(story) && story?.author_id !== userId);
+        .filter((story): story is CommunityRow => Boolean(story) && story?.author_id !== userId);
       const covers = await signCovers(rows.map(row => row.cover_image_path).filter((path): path is string => Boolean(path)));
       if (request === generation.current) {
-        setState({ owner: userId, loading: false, error: '', items: rows.map(row => toMarketplaceStory(row, covers)) });
+        setState({ owner: userId, loading: false, error: '', items: rows.map(row => toCommunityStory(row, covers)) });
       }
     } catch {
       if (request === generation.current) {
@@ -50,7 +50,7 @@ export function useSavedStories(userId: string | null, authLoading: boolean) {
   const visible = !authLoading && state.owner === userId ? state.items : [];
 
   /** Saves or removes a story. The list updates right away and rolls back if the request fails. */
-  const toggle = useCallback(async (story: MarketplaceStory) => {
+  const toggle = useCallback(async (story: CommunityStory) => {
     if (!supabase || !userId) throw new Error('Sign in to save stories to your library.');
     if (story.authorId === userId) throw new Error('This is your story. Find it under Public in your Library.');
     if (pending.includes(story.id)) return;

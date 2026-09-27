@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 import { useStudio } from '../context/studio';
-import type { MarketplaceStory } from '../hooks/use-marketplace-stories';
+import type { CommunityStory } from '../hooks/use-community-stories';
 import { AudioStoryTile } from './audio-story-tile';
 
 /** Story tiles that open the player page; saves sync to the user's library. */
-export function AudioStoryGrid({ stories }: { stories: MarketplaceStory[] }) {
+export function AudioStoryGrid({ stories }: { stories: CommunityStory[] }) {
   const { savedStories, session } = useStudio();
   const [saveError, setSaveError] = useState('');
   return <View className="mt-5">

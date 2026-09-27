@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { LoadingSkeleton } from '../components/loading-skeleton';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { cssInterop } from 'nativewind';
-import { ActivityIndicator, Animated, BackHandler, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Text, useAnimatedValue, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Text, useAnimatedValue, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, colors, Heading, Icon } from '../components/ui';
+import { Body, Heading, Icon } from '../components/ui';
 import Auth from '../components/Auth';
 import { supabase } from '../lib/supabase';
 import { useStudio } from '../context/studio';
@@ -13,6 +14,7 @@ cssInterop(AnimatedKeyboardAvoidingView, { className: 'style' });
 
 export default function AuthScreen() {
   const { session, authLoading, authError } = useStudio();
+  const [register, setRegister] = useState(false);
   const { height } = useWindowDimensions();
   const progress = useAnimatedValue(0);
   const dragY = useAnimatedValue(0);
@@ -83,17 +85,17 @@ export default function AuthScreen() {
         <View {...panResponder.panHandlers} className="px-6 pb-2 pt-3" style={Platform.OS === 'web' ? { touchAction: 'none' } : undefined}>
           <View className="mb-2 h-1 w-10 self-center rounded-full bg-line" />
           <View className="w-full max-w-[400px] flex-row items-center gap-3 self-center">
-            <Heading className="flex-1">Sign in</Heading>
+            <Heading className="flex-1">{register ? 'Sign up' : 'Sign in'}</Heading>
             <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close" className="h-11 w-11 items-center justify-center"><Icon name="close" /></Pressable>
           </View>
         </View>
         <ScrollView className="flex-1" contentContainerClassName="grow px-6 pb-4" keyboardShouldPersistTaps="handled">
           <View className="w-full max-w-[400px] self-center">
             {!supabase ? <Body className="mt-3 text-center !text-[11px]">Sign-in isn’t available yet. Please try again later.</Body>
-              : authLoading ? <ActivityIndicator accessibilityLabel="Restoring your session" color={colors.cocoa} className="mt-3 text-center !text-[11px]" />
+              : authLoading ? <LoadingSkeleton variant="form" label="Restoring your session" className="mt-4" />
               : <>
                 {authError ? <Text accessibilityRole="alert" className="my-3 text-[13px] leading-5 text-rust">{authError}</Text> : null}
-                {session ? null : <Auth />}
+                {session ? null : <Auth onRegisterChange={setRegister} />}
               </>}
           </View>
         </ScrollView>

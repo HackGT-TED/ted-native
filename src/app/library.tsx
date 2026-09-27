@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
+import { LoadingSkeleton } from '../components/loading-skeleton';
 import { Shell } from '../components/shell';
 import { CreationCard } from '../components/creation-card';
 import { AudioStoryGrid } from '../components/audio-story-grid';
-import { Body, Button, colors, Heading } from '../components/ui';
+import { Body, Button, Heading } from '../components/ui';
 import { useStudio } from '../context/studio';
 import { useStoryDraft } from '../hooks/use-story-draft';
 import { useLibraryTab } from '../hooks/use-library-tab';
@@ -15,8 +16,8 @@ type LibraryStory = { id: string | null; title?: string; kind: Kind; updatedAt: 
 
 const sectionInfo: Record<Kind, { title: string; caption: string; empty: string; badge: string }> = {
   draft: { title: 'Drafts', caption: 'Not published yet.', empty: 'No drafts yet.', badge: 'Draft' },
-  public: { title: 'Public', caption: 'In the marketplace for everyone to hear.', empty: 'Nothing public yet. Turn on the marketplace switch when you publish.', badge: 'Public' },
-  private: { title: 'Private', caption: 'Published, but not in the marketplace.', empty: 'No private stories yet.', badge: 'Private' },
+  public: { title: 'Public', caption: 'In the community for everyone to hear.', empty: 'Nothing public yet. Turn on the community switch when you publish.', badge: 'Public' },
+  private: { title: 'Private', caption: 'Published, but not in the community.', empty: 'No private stories yet.', badge: 'Private' },
 };
 
 function StoryCard({ item }: { item: LibraryStory }) {
@@ -30,7 +31,8 @@ function StoryCard({ item }: { item: LibraryStory }) {
     onPress={() => { openStory(item.id); router.push('/create'); }}
     className="mb-3 rounded-[18px] border border-line bg-cream p-5 active:opacity-70">
     <View className="flex-row items-center justify-between gap-3">
-      <Text className="flex-1 text-[18px] font-medium text-ink">{name.name || item.title || 'Untitled story'}</Text>
+      {name.loading && !name.name && !item.title ? <LoadingSkeleton variant="field" label="Loading story name" className="flex-1" />
+        : <Text className="flex-1 text-[18px] font-medium text-ink">{name.name || item.title || 'Untitled story'}</Text>}
       <Text className="text-[11px] font-medium text-cocoa">{sectionInfo[item.kind].badge}</Text>
     </View>
     <Text className="mt-2 text-[12px] text-muted">{item.local ? 'On this device · ' : ''}Updated {new Date(item.updatedAt).toLocaleDateString()}</Text>
@@ -48,7 +50,7 @@ export default function Library() {
   useFocusEffect(useCallback(() => { void refresh(); void refreshTimeline(); void refreshSaved(); }, [refresh, refreshTimeline, refreshSaved]));
   const merged = new Map<string | null, LibraryStory>(stories.items.map(item => [item.creation_session_id, {
     id: item.creation_session_id, title: item.title, updatedAt: item.updated_at, local: false,
-    kind: item.status !== 'published' ? 'draft' : item.marketplace ? 'public' : 'private',
+    kind: item.status !== 'published' ? 'draft' : item.community ? 'public' : 'private',
   }]));
   for (const project of timeline.projects) {
     if (!merged.has(project.id)) merged.set(project.id, {
@@ -66,15 +68,14 @@ export default function Library() {
   return <Shell scroll={false}>
     <FlatList className="w-full max-w-[700px] flex-1 self-center" contentContainerClassName="pb-8 pt-9"
       data={items} keyExtractor={item => item.id ?? 'legacy'} renderItem={({ item }) => <StoryCard item={item} />}
-      ListEmptyComponent={!loading ? <View className="mb-2 rounded-[18px] border border-dashed border-line p-5">
+      ListEmptyComponent={loading ? <LoadingSkeleton variant="cards" label="Loading your stories" /> : <View className="mb-2 rounded-[18px] border border-dashed border-line p-5">
         <Text className="text-[13px] text-muted">{sectionInfo[tab].empty}</Text>
         {tab === 'draft' && <Button title="Create a story" secondary className="mt-4" onPress={() => router.push('/')} />}
-      </View> : null}
-      refreshing={loading} onRefresh={() => { void refresh(); void refreshTimeline(); void refreshSaved(); }}
+      </View>}
+      refreshing={loading && items.length > 0} onRefresh={() => { void refresh(); void refreshTimeline(); void refreshSaved(); }}
       ListHeaderComponent={<View>
         <Heading>Library</Heading>
         <Body className="mt-2">Your stories, from first draft to published.</Body>
-        {stories.loading && <ActivityIndicator className="mt-4" color={colors.cocoa} />}
         {(stories.error || timeline.error) && <View className="mt-4 gap-2">
           <Text accessibilityRole="alert" className="text-[13px] text-rust">{stories.error || timeline.error}</Text>
           <Button title="Retry loading stories" secondary onPress={() => { void refresh(); void refreshTimeline(); }} />
@@ -93,13 +94,14 @@ export default function Library() {
         <Text className="mb-3 mt-3 text-[12px] text-muted">{sectionInfo[tab].caption}</Text>
       </View>}
       ListFooterComponent={<>
-        {session && (savedStories.items.length || savedStories.error) ? <View className="mt-6">
+        {session && (savedStories.loading || savedStories.items.length || savedStories.error) ? <View className="mt-6">
           <Text className="text-[18px] font-medium text-ink">Saved audio stories</Text>
           {savedStories.error ? <View className="mt-3 gap-2">
             <Text accessibilityRole="alert" className="text-[13px] text-rust">{savedStories.error}</Text>
             <Button title="Retry loading saved stories" secondary onPress={() => { void refreshSaved(); }} />
           </View> : null}
-          <AudioStoryGrid stories={savedStories.items} />
+          {savedStories.loading && !savedStories.items.length ? <LoadingSkeleton variant="grid" label="Loading saved stories" className="mt-5" />
+            : <AudioStoryGrid stories={savedStories.items} />}
         </View> : null}
         {bookmarks.length ? <View className="mt-6">
           <Text className="mb-2 text-[18px] font-medium text-ink">Saved creations</Text>

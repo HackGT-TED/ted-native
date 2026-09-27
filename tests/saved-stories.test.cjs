@@ -8,10 +8,10 @@ const story = (id, author = 'bob') => ({ id, authorId: author, title: `Story ${i
 function setup({ list, write } = {}) {
   const hooks = harness();
   const calls = [];
-  const marketplace = load('src/hooks/use-marketplace-stories.ts', { react: hooks.react, '../lib/supabase': { supabase: null } });
+  const community = load('src/hooks/use-community-stories.ts', { react: hooks.react, '../lib/supabase': { supabase: null } });
   const module = load('src/hooks/use-saved-stories.ts', {
     react: hooks.react,
-    './use-marketplace-stories': marketplace,
+    './use-community-stories': community,
     '../lib/supabase': { supabase: {
       from(table) {
         assert.equal(table, 'saved_stories');
@@ -35,7 +35,7 @@ function setup({ list, write } = {}) {
   h.render(); return h;
 }
 
-test('saved stories load with their story, skipping ones no longer on the marketplace', async () => {
+test('saved stories load with their story, skipping ones no longer on the community', async () => {
   const h = setup(); await h.flush();
   assert.match(h.calls[0][1], /story:all_stories\(id,author_id,title,description,published_at,cover_image_path,stereo_audio_path,duration_ms\)/);
   assert.deepEqual(h.calls[1], ['eq', 'user_id', 'alice']);
