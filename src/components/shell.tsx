@@ -8,9 +8,9 @@ import { useStudio } from '../context/studio';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 const links = [
-  { path: '/create' as const, title: 'Create', icon: 'create' as const },
-  { path: '/explore' as const, title: 'Explore', icon: 'search' as const },
-  { path: '/library' as const, title: 'Library', icon: 'book' as const },
+  { path: '/' as const, title: 'Create', icon: 'create' as const, active: ['/', '/create'] },
+  { path: '/explore' as const, title: 'Explore', icon: 'search' as const, active: ['/explore'] },
+  { path: '/library' as const, title: 'Library', icon: 'book' as const, active: ['/library'] },
 ];
 export function Shell({ children, scroll = true, immersive = false, quiet = false, recordingOverlay }: {
   children: ReactNode; scroll?: boolean; immersive?: boolean; quiet?: boolean; recordingOverlay?: ReactNode;
@@ -26,27 +26,23 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
   const pathname = usePathname();
   const { name } = useStudio();
   const navigation = links.map(link => {
-    const selected = pathname === link.path;
-    return <Pressable key={link.path} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => router.replace(link.path)} className={`min-h-11 items-center justify-center gap-[5px] ${mobile ? "flex-1" : ""}`}>
-      {mobile && <Icon name={link.icon} size={22} color={selected ? colors.ink : colors.muted} />}
-      <Text className={`${selected ? "font-semibold text-ink" : "text-muted"} ${mobile ? "text-[11px]" : "text-[13px]"}`}>{link.title}</Text>
+    const selected = link.active.includes(pathname);
+    return <Pressable key={link.path} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => router.replace(link.path)} className="min-h-11 flex-1 items-center justify-center gap-[5px]">
+      <Icon name={link.icon} size={22} color={selected ? colors.ink : colors.muted} />
+      <Text className={`${selected ? "font-semibold text-ink" : "text-muted"} text-[11px]`}>{link.title}</Text>
     </Pressable>;
   });
   const content = <View className={`w-full max-w-[1000px] self-center ${scroll ? "" : "flex-1"} ${mobile ? "px-6" : "px-12"}`}>{children}</View>;
   return <SafeAreaView className="flex-1 bg-paper" edges={['top', 'bottom']}>
     <Animated.View className="flex-1" style={chromeStyle} pointerEvents={immersive ? 'none' : 'auto'} accessibilityElementsHidden={immersive} importantForAccessibility={immersive ? 'no-hide-descendants' : 'auto'}>
-    <Animated.View style={quietStyle} pointerEvents={quiet ? 'none' : 'auto'} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className={`h-[72px] flex-row items-center justify-between border-b border-line ${mobile ? "px-6" : "px-12"}`}>
-      <Pressable accessibilityRole="link" accessibilityLabel="TedTime home" onPress={() => router.replace('/')} className="min-h-11 flex-row items-center gap-[9px]">
-        <BearMark />
-        <Text className="text-[23px] font-bold tracking-[-1.1px] text-ink">tedtime<Text className="text-honey">.</Text></Text>
-      </Pressable>
-      {!mobile && <View className="flex-row gap-6">{navigation}</View>}
-      <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account' : 'Sign in'} onPress={() => router.push('/auth')} className="min-h-11 min-w-11 flex-row items-center justify-center gap-2">
-        <Icon name="person" size={21} />{!mobile && <Text className="text-[13px] text-ink">{name ? 'Account' : 'Sign in'}</Text>}
+    {scroll ? <ScrollView showsVerticalScrollIndicator={false} className="scrollbar-none" keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9">{content}</ScrollView> : content}
+    <Animated.View style={quietStyle} pointerEvents={quiet ? 'none' : 'auto'} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className="flex-row border-t border-line pb-[7px] pt-2.5">
+      {navigation}
+      <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account settings' : 'Sign in'} onPress={() => router.push('/auth')} className="min-h-11 flex-1 items-center justify-center gap-[5px]">
+        <BearMark size={24} />
+        <Text className="text-[11px] text-muted">{name ? 'Account' : 'Sign in'}</Text>
       </Pressable>
     </Animated.View>
-    {scroll ? <ScrollView showsVerticalScrollIndicator={false} className="scrollbar-none" keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9">{content}</ScrollView> : content}
-    {mobile && <Animated.View style={quietStyle} pointerEvents={quiet ? 'none' : 'auto'} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className="flex-row border-t border-line pb-[7px] pt-2.5">{navigation}</Animated.View>}
     </Animated.View>
     {recordingOverlay && <Animated.View className="absolute inset-0 items-center justify-center" style={overlayStyle}
       pointerEvents={immersive ? 'auto' : 'none'} accessibilityElementsHidden={!immersive} importantForAccessibility={immersive ? 'auto' : 'no-hide-descendants'}>
