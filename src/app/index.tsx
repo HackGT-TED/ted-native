@@ -49,7 +49,7 @@ export default function Home() {
 
   return (
     <Shell>
-      <View className="w-full max-w-[700px] self-center pb-8 pt-9">
+      <View className="w-full max-w-[700px] self-center pt-9">
         {/* Someone sent you a story */}
         {newest ? <View className="mb-6 flex-row items-center gap-2 rounded-[14px] border border-line bg-cream py-1 pl-3 pr-1">
           <View className="h-2.5 w-2.5 rounded-full bg-rust" />

@@ -4,27 +4,26 @@ import { useLocalSearchParams } from "expo-router";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { Shell } from "../components/shell";
 import { Body, Button, colors, Heading, Icon } from "../components/ui";
-import { CreationTile } from "../components/creation-card";
+import { WrittenStoryTile } from "../components/written-story-card";
 import { AudioStoryGrid } from "../components/audio-story-grid";
 import { useStudio } from "../context/studio";
 import { useCommunityStories } from "../hooks/use-community-stories";
+import { useWrittenStories } from "../hooks/use-written-stories";
 
 const tabs = ["Written Stories", "Audio Stories"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function Explore() {
-  const { creations, authLoading } = useStudio();
+  const { authLoading } = useStudio();
   // Home's "See all" opens the community straight to Audio Stories (?tab=audio).
   const { tab: requested } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<Tab>(requested === "audio" ? "Audio Stories" : "Written Stories");
   const [query, setQuery] = useState("");
   const audio = useCommunityStories(authLoading);
   const search = query.trim().toLowerCase();
-  const items = creations.filter((item) =>
-    `${item.title} ${item.author}`
-      .replace("\n", " ")
-      .toLowerCase()
-      .includes(search),
+  const written = useWrittenStories();
+  const items = written.items.filter((story) =>
+    `${story.title} ${story.author} ${story.category}`.toLowerCase().includes(search),
   );
   const audioItems = audio.items.filter((story) =>
     `${story.title} ${story.description}`.toLowerCase().includes(search),
@@ -52,10 +51,10 @@ export default function Explore() {
         <View className="mt-4 flex-row items-center gap-3 rounded-[10px] bg-cream px-4">
           <Icon name="search" size={20} color={colors.muted} />
           <TextInput
-            accessibilityLabel={tab === "Audio Stories" ? "Search audio stories" : "Search community creations"}
+            accessibilityLabel={tab === "Audio Stories" ? "Search audio stories" : "Search written stories"}
             value={query}
             onChangeText={setQuery}
-            placeholder={tab === "Audio Stories" ? "Find an audio story" : "Find a story or creator"}
+            placeholder={tab === "Audio Stories" ? "Find an audio story" : "Find a story or author"}
             placeholderTextColor={colors.muted}
             className="min-h-[50px] flex-1 text-[14px] text-ink"
           />
@@ -71,18 +70,24 @@ export default function Explore() {
           ) : null}
         </View>
         {tab === "Written Stories" ? (
-          <>
+          written.error ? (
+            <View className="mt-[60px] items-center gap-4">
+              <Text accessibilityRole="alert" className="text-center text-[13px] text-rust">{written.error}</Text>
+              <Button title="Retry" secondary onPress={() => { void written.refresh(); }} />
+            </View>
+          ) : written.loading && !written.items.length ? (
+            <LoadingSkeleton variant="grid" label="Loading stories" className="mt-5" />
+          ) : items.length ? (
             <View className="mt-5 flex-row flex-wrap justify-between gap-y-4">
-              {items.map((item) => (
-                <CreationTile key={item.id} item={item} />
+              {items.map((story) => (
+                <WrittenStoryTile key={story.slug} story={story} />
               ))}
             </View>
-            {!items.length && (
-              <Body className="mt-[70px] text-center">
-                No results. Try another search.
-              </Body>
-            )}
-          </>
+          ) : (
+            <Body className="mt-[70px] text-center">
+              {search ? "No results. Try another search." : "No stories yet."}
+            </Body>
+          )
         ) : audio.error ? (
           <View className="mt-[60px] items-center gap-4">
             <Text accessibilityRole="alert" className="text-center text-[13px] text-rust">{audio.error}</Text>

@@ -22,40 +22,8 @@ export type Creation = {
   /** The story's words, when it can be read aloud with Record Audio. */
   text?: string;
 };
-export const originals: Creation[] = [{
-  id: 'woodland',
-  title: 'The Woodland\nCompanion',
-  author: 'Florence & Fern',
-  category: 'Stories',
-  color: '#E4CDB0',
-  subtitle: 'A collection of small adventures',
-  illustrated: true,
-  text: storyTexts.woodland
-}, {
-  id: 'ordinary',
-  title: 'The art of\nordinary days',
-  author: 'Eleanor Rose',
-  category: 'Journals',
-  color: '#EEDFCB',
-  subtitle: 'A journal for noticing more',
-  text: storyTexts.ordinary
-}, {
-  id: 'wildflowers',
-  title: 'Wildflowers\n& little wonders',
-  author: 'The Quiet Studio',
-  category: 'Art',
-  color: '#DBC4A6',
-  subtitle: 'Botanical notes from the meadow',
-  text: storyTexts.wildflowers
-}, {
-  id: 'sunday',
-  title: 'A pocketful\nof Sundays',
-  author: 'Oliver Moss',
-  category: 'Stories',
-  color: '#E7CBBB',
-  subtitle: 'Stories for taking your time',
-  text: storyTexts.sunday
-}];
+// Written stories now come from public.written_stories; creations are only ones shared in this session.
+export const originals: Creation[] = [];
 type Studio = {
   storyId: string | null;
   stories: ReturnType<typeof useStories>;
