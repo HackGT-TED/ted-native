@@ -1,8 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import type { PublishedAudio } from '../services/publish-story';
 import type { Story } from '../types/story';
 
-const fields = 'id,user_id,creation_session_id,title,status,created_at,updated_at,published_at';
+const fields = 'id,author_id,title,visibility,created_at,published_at';
+
+type StoryRow = {
+  id: string; author_id: string; title: string;
+  visibility: 'draft' | 'published'; created_at: string; published_at: string | null;
+};
+
+/** all_stories uses the author's own id as the story id of their unnamed legacy draft. */
+function toStory(row: StoryRow): Story {
+  return {
+    id: row.id,
+    user_id: row.author_id,
+    creation_session_id: row.id === row.author_id ? null : row.id,
+    title: row.title,
+    status: row.visibility === 'published' ? 'published' : 'draft',
+    created_at: row.created_at,
+    updated_at: row.published_at ?? row.created_at,
+    published_at: row.published_at,
+  };
+}
 
 export function useStories(userId: string | null, authLoading: boolean) {
   const [state, setState] = useState<{ owner: string | null; items: Story[]; loading: boolean; error: string }>({
@@ -23,9 +43,9 @@ export function useStories(userId: string | null, authLoading: boolean) {
       const items: Story[] = [];
       for (let offset = 0; ; offset += 500) {
         const { data, error } = await supabase.from('all_stories').select(fields)
-          .eq('user_id', userId).order('updated_at', { ascending: false }).order('id').range(offset, offset + 499);
+          .eq('author_id', userId).order('created_at', { ascending: false }).order('id').range(offset, offset + 499);
         if (error) throw error;
-        items.push(...(data ?? []) as Story[]);
+        items.push(...((data ?? []) as StoryRow[]).map(toStory));
         if (!data || data.length < 500) break;
       }
       if (request === generation.current && activeOwner.current === userId) {
@@ -46,7 +66,8 @@ export function useStories(userId: string | null, authLoading: boolean) {
     return () => { requests.current++; };
   }, [refresh]);
 
-  const save = useCallback(async (projectId: string | null, title: string, publish: boolean, segmentIds: string[]) => {
+  const save = useCallback(async (projectId: string | null, title: string, publish: boolean, segmentIds: string[],
+    audio?: PublishedAudio) => {
     if (!supabase || !userId || authLoading) throw new Error('Sign in to save your story to your account.');
     if (savingOwner.current) throw new Error('A story save is already in progress.');
     savingOwner.current = userId;
@@ -57,6 +78,11 @@ export function useStories(userId: string | null, authLoading: boolean) {
         p_title: title.trim() || 'Untitled story',
         p_publish: publish,
         p_segment_ids: segmentIds,
+        ...(audio ? {
+          p_stereo_audio_path: audio.stereoAudioPath,
+          p_description: audio.description,
+          p_category_tags: audio.categoryTags,
+        } : {}),
       });
       if (error) throw new Error('Your story could not be saved to your account. Please retry.');
       const story = data as Story;

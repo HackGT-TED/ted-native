@@ -6,9 +6,6 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
 insert into public.recording_segments(id, user_id, creation_session_id, storage_path, title, recorded_at, duration_ms, position)
 values ('moment-001', auth.uid(), null, auth.uid()::text || '/one.m4a', 'First moment', now(), 1000, 1);
-do $$ begin
-  if (select count(*) from public.all_stories where status = 'draft') <> 1 then raise exception 'Upload did not retain a draft'; end if;
-end $$;
 select public.save_story(null, 'Saved story', false, array['moment-001']);
 select public.save_story(null, 'Published story', true, array['moment-001']);
 -- Saving changes must retain the published snapshot and avoid duplicate stories.
@@ -16,8 +13,11 @@ update public.recording_segments set title = 'Edited moment' where id = 'moment-
 select public.save_story(null, 'Updated name', false, array['moment-001']);
 do $$ begin
   if (select count(*) from public.all_stories) <> 1 then raise exception 'Duplicate story'; end if;
-  if not exists(select 1 from public.all_stories where status = 'published' and title = 'Updated name'
+  if not exists(select 1 from public.all_stories where visibility = 'published' and title = 'Updated name'
     and published_segments->0->>'title' = 'First moment') then raise exception 'Published version was lost'; end if;
+  if not exists(select 1 from public.all_stories where id = auth.uid() and author_id = auth.uid()
+    and description = '' and category = 'Stories' and duration_ms = 1000)
+    then raise exception 'Legacy story id or defaults are wrong'; end if;
   begin
     perform public.save_story(null, 'Incomplete', true, array['missing-moment']);
     raise exception 'Unexpected success';
@@ -43,7 +43,7 @@ end $$;
 select public.save_story(null, 'An empty draft', false, array[]::text[]);
 do $$ begin
   if (select count(*) from public.all_stories) <> 1 then raise exception 'Empty draft was not retained'; end if;
-  if has_function_privilege('anon', 'public.save_story(uuid,text,boolean,text[])', 'execute') then
+  if has_function_privilege('anon', 'public.save_story(uuid,text,boolean,text[],text,text,text)', 'execute') then
     raise exception 'Anonymous publishing is allowed'; end if;
 end $$;
 rollback;

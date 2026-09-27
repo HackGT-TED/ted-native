@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const { load, harness, tick, deferred } = require('./hook-harness.cjs');
 
 function setup() {
-  const hooks = harness(); const calls = [];
+  const hooks = harness(); const calls = []; const published = [];
   const studio = {
     session: { user: { id: 'alice' } }, authLoading: false, storyId: 'my-story',
     draft: { name: 'My story', loading: false, editable: true },
@@ -16,9 +16,15 @@ function setup() {
     'expo-router': { router: { push: route => calls.push(route) } },
     'react-native': { Text: 'Text', View: 'View' },
     './ui': { Button: 'Button' }, '../context/studio': { useStudio: () => studio },
+    '../services/story-api': { warmUp: async () => {} },
+    '../services/publish-story': { prepareStoryAudio: async (...args) => {
+      published.push(args);
+      if (h.publishError) throw h.publishError;
+      return { stereoAudioPath: 'alice/my-story/story.mp3', description: 'A tale.', categoryTags: 'calm' };
+    } },
   });
   const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
-  const h = { studio, calls,
+  const h = { studio, calls, published, publishError: null,
     render(disabled = false) { h.tree = hooks.render(() => module.StoryActions({ disabled })); return h; },
     button(title) { return nodes(h.tree).find(n => n.type === 'Button' && n.props.title === title).props; },
     messages() { return nodes(h.tree).filter(n => n.type === 'Text').map(n => n.props.children).join(' '); },
@@ -29,10 +35,26 @@ function setup() {
 
 test('Save and Publish use the current story and report confirmed success', async () => {
   const h = setup(); h.button('Save').onPress(); await h.flush();
-  assert.deepEqual(h.calls[0], ['my-story', 'My story', false, ['moment-1']]);
+  assert.deepEqual(h.calls[0].slice(0, 4), ['my-story', 'My story', false, ['moment-1']]);
   assert.match(h.messages(), /saved to your account/);
   h.button('Publish').onPress(); await h.flush();
   assert.equal(h.calls[1][2], true); assert.match(h.messages(), /Story published/);
+});
+
+test('Publish sends the moments to the backend first and saves its audio, description and tags', async () => {
+  const h = setup(); h.button('Publish').onPress(); await h.flush();
+  assert.deepEqual(h.published[0], ['alice', 'my-story', [{ id: 'moment-1' }]]);
+  assert.deepEqual(h.calls[0][4], { stereoAudioPath: 'alice/my-story/story.mp3', description: 'A tale.', categoryTags: 'calm' });
+  assert.equal(h.button('Publish').title, 'Publish');
+});
+
+test('Save never calls the backend, and a backend failure does not save a published row', async () => {
+  const h = setup(); h.button('Save').onPress(); await h.flush();
+  assert.equal(h.published.length, 0); assert.equal(h.calls[0][4], undefined);
+  h.publishError = new Error('The story server took too long to respond.');
+  h.button('Publish').onPress(); await h.flush();
+  assert.equal(h.calls.length, 1); assert.match(h.messages(), /took too long/);
+  assert.equal(h.button('Save').disabled, false);
 });
 
 test('unsynced moments and unnamed publications cannot be published', async () => {
