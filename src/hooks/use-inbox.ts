@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { signCovers, type MarketplaceStory } from './use-marketplace-stories';
 
@@ -54,6 +55,21 @@ export function useInbox(userId: string | null, authLoading: boolean) {
     const requests = generation;
     return () => { requests.current++; };
   }, [refresh]);
+
+  // Hear about new shares as they arrive, and catch up when the app returns to the foreground.
+  useEffect(() => {
+    const client = supabase;
+    if (!client || !userId || authLoading) return;
+    const channel = client.channel(`inbox:${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'story_shares', filter: `recipient_id=eq.${userId}` },
+        () => { void refresh(); })
+      .subscribe();
+    const appState = AppState.addEventListener('change', next => { if (next === 'active') void refresh(); });
+    return () => {
+      void client.removeChannel(channel);
+      appState.remove();
+    };
+  }, [authLoading, refresh, userId]);
 
   /** Clears the "new" dot. Best effort: a failed update just shows the dot again next time. */
   const markListened = useCallback((shareId: string) => {

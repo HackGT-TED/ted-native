@@ -9,7 +9,8 @@ function setup({ projects = [], marketplace = [], inbox = [] } = {}) {
     timeline: { ready: true, projects, diskError: '' }, recorder: { phase: 'idle' }, name: 'Rose', authLoading: false,
     stories: { items: [{ creation_session_id: 'p1', title: 'The Dragon' }] },
     openStory: (id, record) => calls.push(['open', id, record]),
-    session: { user: { id: 'kid' } }, inbox: { items: inbox, unheard: inbox.filter(i => !i.listenedAt).length },
+    session: { user: { id: 'kid' } }, inbox: { items: inbox, unheard: inbox.filter(i => !i.listenedAt).length,
+      markListened: id => calls.push(['listened', id]) },
   };
   const router = { push: route => calls.push(['push', route]), replace: route => calls.push(['replace', route]) };
   const module = load('src/app/index.tsx', {
@@ -19,7 +20,7 @@ function setup({ projects = [], marketplace = [], inbox = [] } = {}) {
     'react-native': Object.fromEntries(['ActivityIndicator', 'Pressable', 'Text', 'View'].map(n => [n, n])),
     '../components/shell': { Shell: 'Shell' },
     '../components/audio-story-grid': { AudioStoryGrid: 'AudioStoryGrid' },
-    '../components/inbox-list': { InboxList: 'InboxList' },
+    '../components/inbox-list': { openSentStory: (story, mark) => { mark(story.shareId); calls.push(['openSent', story.id]); } },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading', Icon: 'Icon' },
     '../context/studio': { useStudio: () => studio },
     '../hooks/use-marketplace-stories': { useMarketplaceStories: () => ({ items: marketplace, loading: false, error: '', refresh() {} }) },
@@ -78,12 +79,23 @@ test('Explore shows four marketplace stories and opens the marketplace on Audio 
   assert.equal(replace.params.tab, 'audio');
 });
 
-test('Sent to you previews the newest two stories and links to the Bear tab', () => {
-  const inbox = ['a', 'b', 'c'].map((id, i) => ({ shareId: id, id, title: id, listenedAt: i ? 'x' : null }));
+test('a new story shows a small red notice at the top that opens it', () => {
+  const inbox = [
+    { shareId: 's1', id: 'a', title: 'The Dragon', senderName: 'Grandma Rose', listenedAt: null },
+    { shareId: 's2', id: 'b', title: 'Rain', senderName: 'Grandpa', listenedAt: null },
+    { shareId: 's3', id: 'c', title: 'Old', senderName: 'Grandpa', listenedAt: 'x' },
+  ];
   const h = setup({ inbox });
-  assert.match(h.text(), /Sent to you \(1 new\)/);
-  assert.deepEqual(Array.from(h.all.find(n => n.type === 'InboxList').props.items, s => s.id), ['a', 'b']);
-  h.all.filter(n => n.props?.accessibilityRole === 'link' && JSON.stringify(n).includes('See all'))[0].props.onPress();
-  assert.ok(h.calls.some(c => c[0] === 'replace' && c[1] === '/bear'));
-  assert.doesNotMatch(setup().text(), /Sent to you/, 'hidden when nothing was sent');
+  const notice = h.byLabel('New story from Grandma Rose: The Dragon. Open it.');
+  assert.ok(notice, 'names the sender and the newest unplayed story');
+  assert.match(h.text(), /and 1 more/);
+  notice.onPress();
+  assert.deepEqual(h.calls.slice(-2), [['listened', 's1'], ['openSent', 'a']]);
+  h.byLabel('View all stories sent to you').onPress();
+  assert.ok(h.calls.some(c => c[0] === 'replace' && c[1] === '/family'));
+});
+
+test('no notice when everything sent has been played', () => {
+  const h = setup({ inbox: [{ shareId: 's3', id: 'c', title: 'Old', senderName: 'Grandpa', listenedAt: 'x' }] });
+  assert.doesNotMatch(h.text(), /sent you a story/);
 });

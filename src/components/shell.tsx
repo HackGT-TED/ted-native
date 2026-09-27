@@ -9,7 +9,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 const links = [
   { path: '/' as const, title: 'Home', icon: 'home' as const },
   { path: '/create' as const, title: 'Create', icon: 'create' as const },
-  { path: '/bear' as const, title: 'Bear', icon: 'bear' as const },
+  { path: '/family' as const, title: 'Family', icon: 'family' as const },
   { path: '/explore' as const, title: 'Explore', icon: 'search' as const },
   { path: '/library' as const, title: 'Library', icon: 'book' as const },
 ];
@@ -25,12 +25,20 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
   const quietStyle = useAnimatedStyle(() => ({ opacity: quietFocus.value }));
   const mobile = useWindowDimensions().width < 700;
   const pathname = usePathname();
-  const { name } = useStudio();
+  const { name, inbox } = useStudio();
   const navigation = links.map(link => {
     const selected = pathname === link.path;
-    return <Pressable key={link.path} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => router.replace(link.path)} className={`min-h-11 items-center justify-center gap-[5px] ${mobile ? "flex-1" : ""}`}>
-      {mobile && <Icon name={link.icon} size={22} color={selected ? colors.ink : colors.muted} />}
+    // A red dot on Family while stories sent to you are waiting to be played.
+    const badge = link.path === '/family' && inbox.unheard > 0;
+    return <Pressable key={link.path} accessibilityRole="tab" accessibilityState={{ selected }}
+      accessibilityLabel={badge ? `${link.title}, ${inbox.unheard} new ${inbox.unheard === 1 ? 'story' : 'stories'}` : link.title}
+      onPress={() => router.replace(link.path)} className={`min-h-11 items-center justify-center gap-[5px] ${mobile ? "flex-1" : "flex-row"}`}>
+      {mobile && <View>
+        <Icon name={link.icon} size={22} color={selected ? colors.ink : colors.muted} />
+        {badge ? <View className="absolute -right-1.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-paper bg-rust" /> : null}
+      </View>}
       <Text className={`${selected ? "font-semibold text-ink" : "text-muted"} ${mobile ? "text-[11px]" : "text-[13px]"}`}>{link.title}</Text>
+      {!mobile && badge ? <View className="h-2 w-2 rounded-full bg-rust" /> : null}
     </Pressable>;
   });
   const content = <View className={`w-full max-w-[1000px] self-center ${scroll ? "" : "flex-1"} ${mobile ? "px-6" : "px-12"}`}>{children}</View>;
@@ -48,7 +56,7 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
         <Text className="text-[23px] font-bold tracking-[-1.1px] text-ink">tedtime<Text className="text-honey">.</Text></Text>
       </Pressable>
       {!mobile && <View className="flex-row gap-6">{navigation}</View>}
-      <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account' : 'Sign in'} onPress={() => router.push('/auth')} className="min-h-11 min-w-11 flex-row items-center justify-center gap-2">
+      <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account' : 'Sign in'} onPress={() => router.push(name ? '/account' : '/auth')} className="min-h-11 min-w-11 flex-row items-center justify-center gap-2">
         <Icon name="person" size={21} />{!mobile && <Text className="text-[13px] text-ink">{name ? 'Account' : 'Sign in'}</Text>}
       </Pressable>
     </Animated.View>

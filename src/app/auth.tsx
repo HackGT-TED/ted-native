@@ -5,7 +5,6 @@ import { ActivityIndicator, Animated, BackHandler, Keyboard, KeyboardAvoidingVie
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, colors, Heading, Icon } from '../components/ui';
 import Auth from '../components/Auth';
-import Account from '../components/Account';
 import { supabase } from '../lib/supabase';
 import { useStudio } from '../context/studio';
 
@@ -13,7 +12,7 @@ const AnimatedKeyboardAvoidingView = Animated.createAnimatedComponent(KeyboardAv
 cssInterop(AnimatedKeyboardAvoidingView, { className: 'style' });
 
 export default function AuthScreen() {
-  const { session, authLoading, authError, name } = useStudio();
+  const { session, authLoading, authError } = useStudio();
   const { height } = useWindowDimensions();
   const progress = useAnimatedValue(0);
   const dragY = useAnimatedValue(0);
@@ -64,6 +63,11 @@ export default function AuthScreen() {
     });
   }, [close, dragY]);
 
+  // This sheet only signs people in; once signed in, the app opens and Account is its own page.
+  useEffect(() => {
+    if (session) close();
+  }, [session, close]);
+
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       close();
@@ -79,7 +83,7 @@ export default function AuthScreen() {
         <View {...panResponder.panHandlers} className="px-6 pb-2 pt-3" style={Platform.OS === 'web' ? { touchAction: 'none' } : undefined}>
           <View className="mb-2 h-1 w-10 self-center rounded-full bg-line" />
           <View className="w-full max-w-[400px] flex-row items-center gap-3 self-center">
-            <Heading className="flex-1">{session ? 'Account' : 'Sign in'}</Heading>
+            <Heading className="flex-1">Sign in</Heading>
             <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close" className="h-11 w-11 items-center justify-center"><Icon name="close" /></Pressable>
           </View>
         </View>
@@ -89,7 +93,7 @@ export default function AuthScreen() {
               : authLoading ? <ActivityIndicator accessibilityLabel="Restoring your session" color={colors.cocoa} className="mt-3 text-center !text-[11px]" />
               : <>
                 {authError ? <Text accessibilityRole="alert" className="my-3 text-[13px] leading-5 text-rust">{authError}</Text> : null}
-                {session ? <Account key={session.user.id} userId={session.user.id} email={session.user.email} displayName={name} /> : <Auth />}
+                {session ? null : <Auth />}
               </>}
           </View>
         </ScrollView>
