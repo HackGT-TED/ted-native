@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Every screen that needs an account. Signed-out visitors only reach welcome and auth.
 const appScreens = [
-  'index', 'create', 'family', 'explore', 'library', 'account', 'marketplace', 'recorder', 'share', 'item/[id]', 'story/[id]',
+  'index', 'create', 'family', 'explore', 'library', 'account', 'marketplace', 'recorder', 'share', 'item/[id]', 'story/[id]', 'read/[slug]',
 ] as const;
 
 function Loading() {
