@@ -46,6 +46,15 @@
           "enableBackgroundPlayback": true,
           "enableBackgroundRecording": false
         }
+      ],
+      [
+        "react-native-ble-manager",
+        {
+          "neverForLocation": true,
+          "isBleRequired": false,
+          "companionDeviceEnabled": false,
+          "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to your StoryBear for lights, gentle vibrations, and bear interactions."
+        }
       ]
     ],
     "experiments": {

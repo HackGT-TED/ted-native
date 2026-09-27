@@ -1,5 +1,9 @@
 # Welcome to your Expo app 👋
 
+## StoryBear accessory
+
+Open **My Bear** to find and connect a StoryBear, see its reported battery/readiness, and send a test vibration. This requires an Expo development build on a physical phone. See [StoryBear setup and firmware contract](docs/storybear.md) for build commands, placeholder UUIDs, protocol frames, the shared service API, and hardware validation steps. Bear controls and Bluetooth speaker audio are separate connections; audio still uses the existing player and the phone's audio controls.
+
 ## Styling
 
 All screens and UI components use Tailwind utility classes through NativeWind 4. The palette and icon font are defined in `tailwind.config.js`. Metro uses `inlineRem: 16` so spacing utilities match the original numeric dimensions on native and web.

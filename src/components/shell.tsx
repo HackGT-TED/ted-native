@@ -10,6 +10,7 @@ const links = [
   { path: '/create' as const, title: 'Create', icon: 'create' as const },
   { path: '/explore' as const, title: 'Explore', icon: 'search' as const },
   { path: '/library' as const, title: 'Library', icon: 'book' as const },
+  { path: '/bear' as const, title: 'My Bear', icon: 'heart' as const },
 ];
 export function Shell({ children, scroll = true, immersive = false, quiet = false, recordingOverlay }: {
   children: ReactNode; scroll?: boolean; immersive?: boolean; quiet?: boolean; recordingOverlay?: ReactNode;
