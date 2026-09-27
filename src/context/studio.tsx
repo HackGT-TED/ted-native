@@ -8,6 +8,7 @@ import { useStories } from '../hooks/use-stories';
 import { useSavedStories } from '../hooks/use-saved-stories';
 import { useStoryCover } from '../hooks/use-story-cover';
 import { useInbox } from '../hooks/use-inbox';
+import { useFamily } from '../hooks/use-family';
 export type Creation = {
   id: string;
   title: string;
@@ -54,6 +55,8 @@ type Studio = {
   savedStories: ReturnType<typeof useSavedStories>;
   /** Stories other people sent to this user. */
   inbox: ReturnType<typeof useInbox>;
+  /** The user's family and its invite code. */
+  family: ReturnType<typeof useFamily>;
   storyOpen: boolean;
   autoRecord: boolean;
   openStory: (id: string | null, record?: boolean) => void;
@@ -94,6 +97,7 @@ export function StudioProvider({
   const stories = useStories(owner, authLoading);
   const savedStories = useSavedStories(owner, authLoading);
   const inbox = useInbox(owner, authLoading);
+  const family = useFamily(owner, authLoading);
   const savedStory = stories.items.find(item => item.creation_session_id === (currentStory?.id ?? null));
   const draft = useStoryDraft(owner, authLoading, currentStory?.id ?? null, savedStory?.title);
   const cover = useStoryCover(owner, authLoading, currentStory?.id ?? null, savedStory?.cover_path);
@@ -105,6 +109,7 @@ export function StudioProvider({
     stories,
     savedStories,
     inbox,
+    family,
     storyOpen: Boolean(currentStory),
     autoRecord: currentStory?.autoRecord ?? false,
     openStory,

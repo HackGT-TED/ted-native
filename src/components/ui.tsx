@@ -33,6 +33,7 @@ const glyphs = {
   image: "\ue3f4",
   bear: "\ue91d",
   bluetooth: "\ue1a7",
+  family: "\uf1a2",
 };
 export function Icon({
   name,

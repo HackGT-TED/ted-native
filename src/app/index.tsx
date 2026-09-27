@@ -3,7 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Shell } from '../components/shell';
 import { AudioStoryGrid } from '../components/audio-story-grid';
-import { InboxList } from '../components/inbox-list';
+import { openSentStory } from '../components/inbox-list';
 import { Body, Button, colors, Heading, Icon } from '../components/ui';
 import { useStudio } from '../context/studio';
 import { useMarketplaceStories } from '../hooks/use-marketplace-stories';
@@ -11,7 +11,6 @@ import { formatRecordingDay, newProjectId } from '../utils/recordings';
 
 const RECENT_LIMIT = 3;
 const EXPLORE_LIMIT = 4;
-const INBOX_LIMIT = 2;
 
 function openMarketplace() {
   router.replace({ pathname: '/explore', params: { tab: 'audio' } });
@@ -45,9 +44,31 @@ export default function Home() {
     stories.items.find(item => item.creation_session_id === id)?.title
     ?? (id ? `Story ${timeline.projects.length - index}` : 'Your earlier story');
 
+  const newest = session ? inbox.items.find(item => !item.listenedAt) : undefined;
+
   return (
     <Shell>
       <View className="w-full max-w-[700px] self-center pb-8 pt-9">
+        {/* Someone sent you a story */}
+        {newest ? <View className="mb-6 flex-row items-center gap-2 rounded-[14px] border border-line bg-cream py-1 pl-3 pr-1">
+          <View className="h-2.5 w-2.5 rounded-full bg-rust" />
+          <Pressable accessibilityRole="link"
+            accessibilityLabel={`New story from ${newest.senderName}: ${newest.title}. Open it.`}
+            onPress={() => openSentStory(newest, inbox.markListened)}
+            className="min-h-11 flex-1 justify-center py-1.5 active:opacity-70">
+            <Text numberOfLines={1} className="text-[13px] text-ink">
+              <Text className="font-semibold">{newest.senderName}</Text> sent you a story
+            </Text>
+            <Text numberOfLines={1} className="text-[12px] text-muted">
+              {newest.title}{inbox.unheard > 1 ? ` · and ${inbox.unheard - 1} more` : ''}
+            </Text>
+          </Pressable>
+          {inbox.unheard > 1 ? <Pressable accessibilityRole="link" accessibilityLabel="View all stories sent to you"
+            onPress={() => router.replace('/family')} className="min-h-11 justify-center px-2">
+            <Text className="text-[12px] font-medium text-cocoa">View all</Text>
+          </Pressable> : <View className="pr-2"><Icon name="arrow" size={16} color={colors.cocoa} /></View>}
+        </View> : null}
+
         <Heading>{name ? `Welcome back, ${name}` : 'Welcome to TedTime'}</Heading>
         <Body className="mt-2">Send your stories to the people you love, no matter where they are.</Body>
 
@@ -97,13 +118,6 @@ export default function Home() {
             <Text className="text-[13px] text-muted">Your recordings will show up here. Tap to record to begin your first story.</Text>
           </View>}
         </View>
-
-        {/* Sent to you: newest stories from family and friends */}
-        {session && inbox.items.length ? <View className="mt-10">
-          <SectionHeader title={inbox.unheard ? `Sent to you (${inbox.unheard} new)` : 'Sent to you'}
-            action="See all" onAction={() => router.replace('/bear')} />
-          <InboxList items={inbox.items.slice(0, INBOX_LIMIT)} />
-        </View> : null}
 
         {/* Explore: a slice of the marketplace */}
         <View className="mt-10">

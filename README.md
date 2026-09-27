@@ -1,4 +1,6 @@
-# Welcome to your Expo app 👋
+# TedTime (ted-native)
+
+**Setting up on a new computer? Start with [SETUP.md](SETUP.md).**
 
 ## Styling
 

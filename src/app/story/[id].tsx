@@ -24,7 +24,7 @@ function goBack() {
 /** Album-style player for one story: artwork, details, scrubber, and transport controls. */
 export default function StoryPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session, authLoading, savedStories } = useStudio();
+  const { session, authLoading, savedStories, inbox } = useStudio();
   const { story, loading, error, refresh } = useMarketplaceStory(id, authLoading);
   const player = useStoryPlayer();
   const [barWidth, setBarWidth] = useState(0);
@@ -62,6 +62,8 @@ export default function StoryPlayer() {
   const position = active ? Math.min(player.positionMs, duration || player.positionMs) : 0;
   const progress = duration > 0 ? Math.min(1, position / duration) : 0;
   const own = story.authorId === session?.user.id;
+  // Set when someone sent this story to the viewer.
+  const sent = inbox.items.find(item => item.id === story.id);
   const saved = savedStories.ids.has(story.id);
   const saving = savedStories.pending.includes(story.id);
   const published = formatPublished(story.publishedAt);
@@ -85,6 +87,7 @@ export default function StoryPlayer() {
     <View className="mt-8 flex-row items-start gap-3">
       <View className="flex-1 gap-1">
         <Heading className="!text-[28px] !leading-[34px]">{story.title}</Heading>
+        {sent ? <Text className="text-[13px] font-medium text-cocoa">Sent by {sent.senderName}</Text> : null}
         {published ? <Text className="text-[12px] text-muted">Published {published}</Text> : null}
       </View>
       {own ? <View className="mt-1 rounded-full bg-cream px-3 py-1.5">
@@ -140,7 +143,10 @@ export default function StoryPlayer() {
         <Icon name="replay10" size={34} color={colors.ink} />
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={playing ? 'Pause' : 'Play'}
-        accessibilityState={{ busy }} onPress={() => { void player.toggle(story); }}
+        accessibilityState={{ busy }} onPress={() => {
+          if (sent && !sent.listenedAt) inbox.markListened(sent.shareId);
+          void player.toggle(story);
+        }}
         className="h-20 w-20 items-center justify-center rounded-full bg-cocoa active:opacity-80">
         {busy ? <ActivityIndicator color={colors.paper} />
           : <Icon name={playing ? 'pause' : 'play'} size={44} color={colors.paper} />}

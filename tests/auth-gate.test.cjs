@@ -44,7 +44,7 @@ test('signed out: only the welcome screen and sign-in are reachable', () => {
   const app = protectedGroups.find(group => group.screens.includes('index'));
   assert.equal(welcome.guard, true);
   assert.equal(app.guard, false);
-  for (const name of ['index', 'create', 'bear', 'explore', 'library', 'story/[id]', 'item/[id]']) {
+  for (const name of ['index', 'create', 'family', 'explore', 'library', 'account', 'story/[id]', 'item/[id]']) {
     assert.ok(app.screens.includes(name), `${name} is behind sign-in`);
   }
   assert.deepEqual(open, ['auth'], 'the sign-in sheet stays reachable');
