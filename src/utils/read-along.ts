@@ -1,5 +1,8 @@
-/** A display token from the script. `key` is the normalized form used for matching. */
-export type ScriptWord = { text: string; key: string };
+/**
+ * A display token from the script. `key` is the normalized form used for matching;
+ * `paragraph` is the index of the paragraph it belongs to (blank lines separate them).
+ */
+export type ScriptWord = { text: string; key: string; paragraph: number };
 
 const STOPWORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'had', 'has', 'have', 'he',
@@ -16,19 +19,29 @@ export function normalizeWord(word: string): string {
   return /^\d+$/.test(key) && Number(key) <= 20 ? NUMBERS[Number(key)] : key;
 }
 
-/** Splits a script into words, attaching stray punctuation (em dashes, quotes) to a neighbor. */
+/**
+ * Splits a script into words, keeping paragraphs (separated by blank lines) and
+ * attaching stray punctuation (em dashes, quotes) to a neighboring word.
+ */
 export function tokenizeScript(script: string): ScriptWord[] {
   const words: ScriptWord[] = [];
-  let pending = '';
-  for (const text of script.split(/\s+/).filter(Boolean)) {
-    const key = normalizeWord(text);
-    if (!key) {
-      if (words.length) words[words.length - 1].text += ` ${text}`;
-      else pending += `${text} `;
-      continue;
+  let paragraph = -1;
+  for (const block of script.split(/\n\s*\n/)) {
+    const tokens = block.split(/\s+/).filter(Boolean);
+    if (!tokens.some(normalizeWord)) continue;
+    paragraph++;
+    let pending = '';
+    for (const text of tokens) {
+      const key = normalizeWord(text);
+      const previous = words[words.length - 1];
+      if (!key) {
+        if (previous?.paragraph === paragraph) previous.text += ` ${text}`;
+        else pending += `${text} `;
+        continue;
+      }
+      words.push({ text: pending + text, key, paragraph });
+      pending = '';
     }
-    words.push({ text: pending + text, key });
-    pending = '';
   }
   return words;
 }

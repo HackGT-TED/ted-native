@@ -222,6 +222,7 @@ function StoryWorkspace() {
               <StoryCoverPicker disabled={phase !== "idle" || stories.saving} />
               <StoryTitle key={`${session?.user.id ?? "guest"}:${storyId ?? "legacy"}`}
                 disabled={phase !== "idle" || stories.saving || dragState.dragging} />
+              <ContinueReading disabled={phase !== "idle"} />
               <StoryActions disabled={phase !== "idle" || dragState.dragging} />
               {timeline.error && (
                 <View className="mt-4 gap-2">

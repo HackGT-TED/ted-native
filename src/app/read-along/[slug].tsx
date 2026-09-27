@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { Shell } from '../../components/shell';
 import { Body, Button, colors, Heading, Icon, Label } from '../../components/ui';
 import { HighlightedScript } from '../../components/read-along/highlighted-script';
 import { useStudio } from '../../context/studio';
 import { useReadAlong, type ReadAlongPhase, type ReadAlongTake } from '../../hooks/use-read-along';
 import { useReadingLink } from '../../hooks/use-reading-link';
+import { useWrittenStory } from '../../hooks/use-written-stories';
 import { saveReadingLink, type ReadingLink } from '../../services/reading-links';
 import { formatDuration, newProjectId } from '../../utils/recordings';
 import type { ScriptWord } from '../../utils/read-along';
@@ -28,22 +29,29 @@ function clipTitle(words: ScriptWord[], take: ReadAlongTake, fallback: string) {
 }
 
 /** Read a written story aloud: a purple highlighter follows along, and each take becomes a clip. */
-export default function ReadStory() {
-  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
-  const { creations } = useStudio();
-  const item = creations.find(creation => creation.id === id);
+export default function ReadAlongScreen() {
+  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { story, loading, error, refresh } = useWrittenStory(slug);
   const back = () => router.canGoBack() ? router.back()
-    : router.replace({ pathname: '/item/[id]', params: { id, ...(from ? { from } : {}) } });
-  if (!item?.text || Platform.OS === 'web') {
-    return <Shell><View className="w-full max-w-[500px] self-center pt-3">
-      <BackLink onPress={back} />
-      <Heading className="!text-[32px] !leading-[40px]">{item?.text ? 'Read along' : 'Story not found'}</Heading>
-      <Body className="mt-2">{item?.text
-        ? 'Read along uses native microphone streaming. Open this story on iOS or Android.'
-        : 'This story has no text to read along with.'}</Body>
-    </View></Shell>;
+    : router.replace({ pathname: '/read/[slug]', params: { slug } });
+  const text = story?.paragraphs.join('\n\n');
+  if (story && text && Platform.OS !== 'web') {
+    return <ReadAlong key={story.slug} storyId={story.slug} title={story.title} text={text} onBack={back} />;
   }
-  return <ReadAlong key={item.id} storyId={item.id} title={item.title.replace('\n', ' ')} text={item.text} onBack={back} />;
+  return <Shell><View className="w-full max-w-[500px] self-center pt-3">
+    <BackLink onPress={back} />
+    {loading && !story ? <ActivityIndicator accessibilityLabel="Loading story" className="mt-[80px]" color={colors.cocoa} />
+      : error ? <View className="mt-[60px] items-center gap-4">
+        <Text accessibilityRole="alert" className="text-center text-[13px] text-rust">{error}</Text>
+        <Button title="Retry" secondary onPress={() => { void refresh(); }} />
+      </View>
+      : <>
+        <Heading className="!text-[32px] !leading-[40px]">{story ? 'Read along' : 'Story not found'}</Heading>
+        <Body className="mt-2">{story
+          ? 'Read along uses native microphone streaming. Open this story on iOS or Android.'
+          : 'It may have been removed.'}</Body>
+      </>}
+  </View></Shell>;
 }
 
 function BackLink({ onPress, disabled = false }: { onPress: () => void; disabled?: boolean }) {
@@ -61,11 +69,14 @@ function ReadAlong({ storyId, title, text, onBack }: { storyId: string; title: s
   const [freshProject] = useState(newProjectId);
   const projectId = reading.link?.projectId ?? freshProject;
   const open = !reading.loading && openId === projectId;
+  const focused = useIsFocused();
 
   // Open the story, as Create does, so its clips and name are the current ones and takes land in it.
+  // Only while this screen is showing: other stack screens (another reading, Create) stay mounted
+  // underneath and would otherwise keep switching the open story back and forth.
   useEffect(() => {
-    if (!reading.loading && openId !== projectId && recorder.phase === 'idle') openStory(projectId);
-  }, [openId, openStory, projectId, reading.loading, recorder.phase]);
+    if (focused && !reading.loading && openId !== projectId && recorder.phase === 'idle') openStory(projectId);
+  }, [focused, openId, openStory, projectId, reading.loading, recorder.phase]);
 
   const wordsRef = useRef<ScriptWord[]>([]);
   const onRecorded = useCallback((take: ReadAlongTake) => {

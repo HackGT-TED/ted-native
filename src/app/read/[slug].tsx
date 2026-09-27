@@ -44,6 +44,9 @@ export default function ReadStory() {
         <Heading className="mt-8 !text-[32px] !leading-[40px]">{story.title}</Heading>
         <Text className="mt-2 text-[14px] text-ink">{story.author}</Text>
         <Text className="mt-1 text-[12px] text-muted">{story.category} · {story.reading_minutes} min read aloud</Text>
+        {/* Read along: a highlighter follows the reader, and each take is saved as a clip in a story. */}
+        <Button title="Read along" icon="mic" className="mt-6"
+          onPress={() => router.push({ pathname: '/read-along/[slug]', params: { slug: story.slug } })} />
 
         <View className="mt-8 gap-5">
           {story.paragraphs.map((paragraph, index) => <Text key={index}

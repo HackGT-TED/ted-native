@@ -10,7 +10,6 @@ import { useStoryCover } from '../hooks/use-story-cover';
 import { useInbox } from '../hooks/use-inbox';
 import { useFamily } from '../hooks/use-family';
 import { useReadingAutoSave } from '../hooks/use-reading-autosave';
-import * as storyTexts from '../data/story-texts';
 export type Creation = {
   id: string;
   title: string;
@@ -19,8 +18,6 @@ export type Creation = {
   color: string;
   subtitle: string;
   illustrated?: boolean;
-  /** The story's words, when it can be read aloud with Record Audio. */
-  text?: string;
 };
 // Written stories now come from public.written_stories; creations are only ones shared in this session.
 export const originals: Creation[] = [];

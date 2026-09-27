@@ -16,8 +16,6 @@ export default function Item() {
       <View className="mt-7"><Heading className="!text-[32px] !leading-[40px]">{item.title.replace('\n', ' ')}</Heading><Body className="mt-2.5">{item.subtitle}</Body></View>
       <Body className="py-6 !text-[12px]">Shared by {item.author}</Body>
       <Button title={saved.includes(item.id) ? 'Remove from library' : 'Save to library'} icon={saved.includes(item.id) ? 'check' : 'heart'} secondary={saved.includes(item.id)} onPress={() => toggleSave(item.id)} />
-      {item.text && <Button secondary title="Read along" icon="mic" className="mt-3"
-        onPress={() => router.push({ pathname: '/read/[id]', params: { id: item.id, ...(from ? { from } : {}) } })} />}
       <Body className="mt-[18px] text-center !text-[11px]">{saved.includes(item.id) ? 'You can find this creation in your Library.' : 'Keep this creation in your Library to revisit.'}</Body>
     </> : <><Heading>Item not found</Heading><Body>This creation is no longer available.</Body></>}
   </View></Shell>;

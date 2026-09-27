@@ -25,6 +25,14 @@ test('tokenizes words, folds stray punctuation into a neighbor, and normalizes n
   assert.equal(normalizeWord('Café,'), 'cafe');
 });
 
+test('keeps paragraphs, so long stories render and track across them', () => {
+  const story = tokenizeScript('Once there was a bear.\n\n"Hello!" said the bear,\nwaving.\n\n\n— The End —');
+  assert.deepEqual([...story.map(word => word.paragraph)], [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2]);
+  assert.equal(story[10].text, '— The'); // Stray punctuation attaches within its own paragraph.
+  // Matching flows straight across a paragraph break.
+  assert.equal(alignSpokenWords(story, ['a', 'bear', 'hello', 'said'], 3).position, 7);
+});
+
 test('follows words in order and ignores filler and misrecognitions', () => {
   assert.equal(read('once upon um a time'), 4);
   assert.equal(read('once upon xyzzy a'), 3);
