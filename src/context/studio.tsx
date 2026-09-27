@@ -5,6 +5,9 @@ import { useRecordingSegments } from '../hooks/use-recording-segments';
 import { useAudioCapture } from '../hooks/use-audio-capture';
 import { useStoryDraft } from '../hooks/use-story-draft';
 import { useStories } from '../hooks/use-stories';
+import { useSavedStories } from '../hooks/use-saved-stories';
+import { useStoryCover } from '../hooks/use-story-cover';
+import { useInbox } from '../hooks/use-inbox';
 export type Creation = {
   id: string;
   title: string;
@@ -47,11 +50,17 @@ export const originals: Creation[] = [{
 type Studio = {
   storyId: string | null;
   stories: ReturnType<typeof useStories>;
+  /** Marketplace stories this user saved to their library. */
+  savedStories: ReturnType<typeof useSavedStories>;
+  /** Stories other people sent to this user. */
+  inbox: ReturnType<typeof useInbox>;
   storyOpen: boolean;
   autoRecord: boolean;
   openStory: (id: string | null, record?: boolean) => void;
   consumeAutoRecord: () => void;
   draft: ReturnType<typeof useStoryDraft>;
+  /** The open story's cover image. */
+  cover: ReturnType<typeof useStoryCover>;
   timeline: ReturnType<typeof useRecordingSegments>;
   recorder: ReturnType<typeof useAudioCapture>;
   name: string;
@@ -83,19 +92,25 @@ export function StudioProvider({
   }, []);
   const timeline = useRecordingSegments(session?.user.id ?? null, authLoading, currentStory?.id ?? null);
   const stories = useStories(owner, authLoading);
+  const savedStories = useSavedStories(owner, authLoading);
+  const inbox = useInbox(owner, authLoading);
   const savedStory = stories.items.find(item => item.creation_session_id === (currentStory?.id ?? null));
   const draft = useStoryDraft(owner, authLoading, currentStory?.id ?? null, savedStory?.title);
+  const cover = useStoryCover(owner, authLoading, currentStory?.id ?? null, savedStory?.cover_path);
   const recorder = useAudioCapture(timeline.addRecording);
   const [creations, setCreations] = useState(originals);
   const [saved, setSaved] = useState<string[]>([]);
   return <Context.Provider value={{
     storyId: currentStory?.id ?? null,
     stories,
+    savedStories,
+    inbox,
     storyOpen: Boolean(currentStory),
     autoRecord: currentStory?.autoRecord ?? false,
     openStory,
     consumeAutoRecord,
     draft,
+    cover,
     timeline,
     recorder,
     name,

@@ -25,8 +25,8 @@ export function StoryNameForm({ disabled = false }: { disabled?: boolean }) {
       <Pressable accessibilityRole="button" accessibilityLabel="Retry saving story name" onPress={draft.retry} className="min-h-11 justify-center self-start pr-4">
         <Text className="text-[12px] font-medium text-cocoa">Retry</Text>
       </Pressable>
-    </View> : <Text className="text-[11px] text-muted">
-      {draft.loading ? 'Loading story name…' : draft.saving ? 'Saving…' : 'Automatically saved on this device.'}
-    </Text>}
+    </View> : draft.loading || draft.saving ? <Text className="text-[11px] text-muted">
+      {draft.loading ? 'Loading story name…' : 'Saving…'}
+    </Text> : null}
   </View>;
 }

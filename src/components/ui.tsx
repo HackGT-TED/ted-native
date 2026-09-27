@@ -28,6 +28,11 @@ const glyphs = {
   trash: "\ue872",
   stop: "\ue047",
   drag: "\ue25d",
+  replay10: "\ue059",
+  forward10: "\ue056",
+  image: "\ue3f4",
+  bear: "\ue91d",
+  bluetooth: "\ue1a7",
 };
 export function Icon({
   name,

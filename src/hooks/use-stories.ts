@@ -3,11 +3,21 @@ import { supabase } from '../lib/supabase';
 import type { PublishedAudio } from '../services/publish-story';
 import type { Story } from '../types/story';
 
-const fields = 'id,author_id,title,visibility,created_at,published_at';
+const fields = 'id,author_id,title,visibility,created_at,published_at,marketplace_visible,cover_image_path';
 
 type StoryRow = {
   id: string; author_id: string; title: string;
   visibility: 'draft' | 'published'; created_at: string; published_at: string | null;
+  marketplace_visible: boolean; cover_image_path: string | null;
+};
+
+export type SaveExtras = {
+  /** Publish only: the backend's mixed MP3, description, and tags. */
+  audio?: PublishedAudio;
+  /** Publish only: show the story in the marketplace. */
+  marketplace?: boolean;
+  /** A cover path to set, '' to remove the cover, or undefined to leave it. */
+  coverPath?: string;
 };
 
 /** all_stories uses the author's own id as the story id of their unnamed legacy draft. */
@@ -21,6 +31,8 @@ function toStory(row: StoryRow): Story {
     created_at: row.created_at,
     updated_at: row.published_at ?? row.created_at,
     published_at: row.published_at,
+    marketplace: Boolean(row.marketplace_visible),
+    cover_path: row.cover_image_path ?? null,
   };
 }
 
@@ -67,7 +79,7 @@ export function useStories(userId: string | null, authLoading: boolean) {
   }, [refresh]);
 
   const save = useCallback(async (projectId: string | null, title: string, publish: boolean, segmentIds: string[],
-    audio?: PublishedAudio) => {
+    { audio, marketplace, coverPath }: SaveExtras = {}) => {
     if (!supabase || !userId || authLoading) throw new Error('Sign in to save your story to your account.');
     if (savingOwner.current) throw new Error('A story save is already in progress.');
     savingOwner.current = userId;
@@ -83,6 +95,8 @@ export function useStories(userId: string | null, authLoading: boolean) {
           p_description: audio.description,
           p_category_tags: audio.categoryTags,
         } : {}),
+        ...(publish && marketplace !== undefined ? { p_marketplace: marketplace } : {}),
+        ...(coverPath !== undefined ? { p_cover_image_path: coverPath } : {}),
       });
       if (error) throw new Error('Your story could not be saved to your account. Please retry.');
       const story = data as Story;

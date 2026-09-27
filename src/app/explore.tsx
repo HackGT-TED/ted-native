@@ -1,36 +1,60 @@
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { Shell } from "../components/shell";
-import { Body, colors, Heading, Icon } from "../components/ui";
-import { CreationCard } from "../components/creation-card";
+import { Body, Button, colors, Heading, Icon } from "../components/ui";
+import { CreationTile } from "../components/creation-card";
+import { AudioStoryGrid } from "../components/audio-story-grid";
 import { useStudio } from "../context/studio";
+import { useMarketplaceStories } from "../hooks/use-marketplace-stories";
+
+const tabs = ["Written Stories", "Audio Stories"] as const;
+type Tab = (typeof tabs)[number];
 
 export default function Explore() {
-  const { creations } = useStudio();
-  const [category, setCategory] = useState("All");
+  const { creations, authLoading } = useStudio();
+  // Home's "See all" opens the marketplace straight to Audio Stories (?tab=audio).
+  const { tab: requested } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(requested === "audio" ? "Audio Stories" : "Written Stories");
   const [query, setQuery] = useState("");
-  const items = creations.filter(
-    (item) =>
-      (category === "All" || item.category === category) &&
-      `${item.title} ${item.author}`
-        .replace("\n", " ")
-        .toLowerCase()
-        .includes(query.trim().toLowerCase()),
+  const audio = useMarketplaceStories(authLoading);
+  const search = query.trim().toLowerCase();
+  const items = creations.filter((item) =>
+    `${item.title} ${item.author}`
+      .replace("\n", " ")
+      .toLowerCase()
+      .includes(search),
+  );
+  const audioItems = audio.items.filter((story) =>
+    `${story.title} ${story.description}`.toLowerCase().includes(search),
   );
   return (
     <Shell>
       <View className="w-full max-w-[700px] self-center pt-9">
         <Heading>Explore</Heading>
         <Body className="mt-2">
-          Stories, thoughts, and art from the community.
+          Search our marketplace and find stories to read, as well as pre-recorded audio to share!
         </Body>
-        <View className="mt-7 flex-row items-center gap-3 rounded-[10px] bg-cream px-4">
+        <View accessibilityRole="tablist" className="mt-6 flex-row rounded-[12px] bg-cream p-1">
+          {tabs.map((value) => (
+            <Pressable
+              key={value}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: tab === value }}
+              onPress={() => setTab(value)}
+              className={`min-h-11 flex-1 items-center justify-center rounded-[9px] ${tab === value ? "bg-paper" : ""}`}
+            >
+              <Text className={`text-[13px] font-medium ${tab === value ? "text-ink" : "text-muted"}`}>{value}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <View className="mt-4 flex-row items-center gap-3 rounded-[10px] bg-cream px-4">
           <Icon name="search" size={20} color={colors.muted} />
           <TextInput
-            accessibilityLabel="Search community creations"
+            accessibilityLabel={tab === "Audio Stories" ? "Search audio stories" : "Search community creations"}
             value={query}
             onChangeText={setQuery}
-            placeholder="Find a story or creator"
+            placeholder={tab === "Audio Stories" ? "Find an audio story" : "Find a story or creator"}
             placeholderTextColor={colors.muted}
             className="min-h-[50px] flex-1 text-[14px] text-ink"
           />
@@ -45,29 +69,31 @@ export default function Explore() {
             </Pressable>
           ) : null}
         </View>
-        <View className="mt-5 flex-row flex-wrap gap-[22px] border-b border-line">
-          {["All", "Stories", "Journals", "Art"].map((value) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: category === value }}
-              onPress={() => setCategory(value)}
-              key={value}
-              className={`min-h-11 justify-center ${category === value ? "border-b-2 border-ink" : ""}`}
-            >
-              <Text
-                className={`text-[12px] ${category === value ? "text-ink" : "text-muted"}`}
-              >
-                {value}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        {items.map((item) => (
-          <CreationCard key={item.id} item={item} />
-        ))}
-        {!items.length && (
+        {tab === "Written Stories" ? (
+          <>
+            <View className="mt-5 flex-row flex-wrap justify-between gap-y-4">
+              {items.map((item) => (
+                <CreationTile key={item.id} item={item} />
+              ))}
+            </View>
+            {!items.length && (
+              <Body className="mt-[70px] text-center">
+                No results. Try another search.
+              </Body>
+            )}
+          </>
+        ) : audio.error ? (
+          <View className="mt-[60px] items-center gap-4">
+            <Text accessibilityRole="alert" className="text-center text-[13px] text-rust">{audio.error}</Text>
+            <Button title="Retry" secondary onPress={() => { void audio.refresh(); }} />
+          </View>
+        ) : audio.loading || authLoading ? (
+          <ActivityIndicator accessibilityLabel="Loading audio stories" className="mt-[60px]" color={colors.cocoa} />
+        ) : audioItems.length ? (
+          <AudioStoryGrid stories={audioItems} />
+        ) : (
           <Body className="mt-[70px] text-center">
-            No results. Try another search.
+            {search ? "No results. Try another search." : "No audio stories yet. Publish one to the marketplace from Create!"}
           </Body>
         )}
       </View>

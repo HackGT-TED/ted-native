@@ -54,6 +54,7 @@ test('saving publishes the same story and ignores an older list response', async
   assert.equal(h.result.items[0].status, 'published');
   assert.equal(h.calls.at(-1).args.p_title, 'My story');
   assert.equal(h.calls.at(-1).args.p_creation_session_id, 'story-1');
+  assert.equal('p_marketplace' in h.calls.at(-1).args, false);
   pending.resolve({ data: [dbRow('alice')] }); await h.flush();
   assert.equal(h.result.items[0].status, 'published');
 });
@@ -80,7 +81,7 @@ test('duplicate saves are blocked and late saves do not enter another account', 
 test('rows map to the app story shape, including the legacy draft and published state', async () => {
   const h = setup({ list: async owner => ({ data: [
     { id: owner, author_id: owner, title: 'Legacy', visibility: 'draft', created_at: '2026-09-25T00:00:00Z', published_at: null },
-    { id: 'story-2', author_id: owner, title: 'Out', visibility: 'published', created_at: '2026-09-25T00:00:00Z', published_at: '2026-09-26T00:00:00Z' },
+    { id: 'story-2', author_id: owner, title: 'Out', visibility: 'published', marketplace_visible: true, created_at: '2026-09-25T00:00:00Z', published_at: '2026-09-26T00:00:00Z' },
   ] }) });
   await h.flush();
   const [legacy, published] = h.result.items;
@@ -90,4 +91,24 @@ test('rows map to the app story shape, including the legacy draft and published 
   assert.equal(published.creation_session_id, 'story-2');
   assert.equal(published.status, 'published');
   assert.equal(published.updated_at, '2026-09-26T00:00:00Z');
+  assert.equal(published.marketplace, true);
+  assert.equal(legacy.marketplace, false);
+});
+
+test('Publish sends the marketplace choice; Save never does', async () => {
+  const h = setup();
+  await h.result.save('story-1', 'My story', true, ['moment-1'], { marketplace: true }); await h.flush();
+  assert.equal(h.calls.at(-1).args.p_marketplace, true);
+  await h.result.save('story-1', 'My story', false, ['moment-1'], { marketplace: true }); await h.flush();
+  assert.equal('p_marketplace' in h.calls.at(-1).args, false);
+});
+
+test('a cover change is sent only when there is one', async () => {
+  const h = setup();
+  await h.result.save('story-1', 'My story', false, ['moment-1']); await h.flush();
+  assert.equal('p_cover_image_path' in h.calls.at(-1).args, false);
+  await h.result.save('story-1', 'My story', false, ['moment-1'], { coverPath: 'alice/story-1/cover.jpg' }); await h.flush();
+  assert.equal(h.calls.at(-1).args.p_cover_image_path, 'alice/story-1/cover.jpg');
+  await h.result.save('story-1', 'My story', false, ['moment-1'], { coverPath: '' }); await h.flush();
+  assert.equal(h.calls.at(-1).args.p_cover_image_path, '');
 });

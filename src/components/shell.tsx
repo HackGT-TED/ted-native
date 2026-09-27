@@ -7,7 +7,9 @@ import { useStudio } from '../context/studio';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 const links = [
+  { path: '/' as const, title: 'Home', icon: 'home' as const },
   { path: '/create' as const, title: 'Create', icon: 'create' as const },
+  { path: '/bear' as const, title: 'Bear', icon: 'bear' as const },
   { path: '/explore' as const, title: 'Explore', icon: 'search' as const },
   { path: '/library' as const, title: 'Library', icon: 'book' as const },
 ];

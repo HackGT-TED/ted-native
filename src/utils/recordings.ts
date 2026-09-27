@@ -68,3 +68,11 @@ export function moveSegmentBefore(segments: RecordingSegment[], id: string, befo
   }
   return result.map((item, i) => item.order === (i + 1) * 1024 ? item : { ...item, order: (i + 1) * 1024 });
 }
+
+// Project IDs identify drafts; authentication and ownership are enforced separately.
+export function newProjectId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, character => {
+    const value = Math.floor(Math.random() * 16);
+    return (character === 'x' ? value : (value & 3) | 8).toString(16);
+  });
+}

@@ -22,3 +22,26 @@ export function CreationCard({ item, origin = 'explore' }: { item: Creation; ori
     <Pressable accessibilityRole="button" accessibilityLabel={`${selected ? 'Remove from library:' : 'Save to library:'} ${item.title.replace('\n', ' ')}`} accessibilityState={{ selected }} onPress={() => toggleSave(item.id)} className="min-h-11 w-10 items-center justify-center"><Icon name={selected ? 'check' : 'heart'} size={20} color={selected ? colors.ink : colors.muted} /></Pressable>
   </View>;
 }
+/** Tile matching AudioStoryTile, for the Explore grid. */
+export function CreationTile({ item }: { item: Creation }) {
+  const { saved, toggleSave } = useStudio();
+  const selected = saved.includes(item.id);
+  const title = item.title.replace('\n', ' ');
+  return <View className="w-[48%] overflow-hidden rounded-xl border border-line bg-paper">
+    <Pressable accessibilityRole="link" accessibilityLabel={`Open ${title}. ${item.subtitle}`} onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id, from: 'explore' } })} className="active:opacity-80">
+      <View className="h-[132px] w-full items-center justify-center" style={{ backgroundColor: item.color }}>
+        <Icon name={item.category === 'Journals' ? 'create' : 'book'} size={34} color={colors.cocoa} />
+      </View>
+      <View className="gap-1.5 p-3">
+        <Text numberOfLines={2} className="text-[15px] font-medium leading-[20px] text-ink">{title}</Text>
+        {item.subtitle ? <Text numberOfLines={3} className="text-[12px] leading-[17px] text-muted">{item.subtitle}</Text> : null}
+        <Text className="text-[11px] text-muted">{item.author}</Text>
+      </View>
+    </Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${selected ? 'Remove from library:' : 'Save to library:'} ${title}`} accessibilityState={{ selected }} onPress={() => toggleSave(item.id)} className="absolute right-1.5 top-1.5 h-11 w-11 items-center justify-center">
+      <View className="h-8 w-8 items-center justify-center rounded-full bg-paper/90">
+        <Icon name={selected ? 'check' : 'heart'} size={18} color={selected ? colors.rust : colors.muted} />
+      </View>
+    </Pressable>
+  </View>;
+}

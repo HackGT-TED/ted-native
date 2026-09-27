@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Redirect, router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef } from "react";
+import { router, useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
   Keyboard,
@@ -15,12 +15,14 @@ import { RecordingTimelineItem } from "../components/recording/recording-timelin
 import { DraggableRecordingList } from "../components/recording/draggable-recording-list";
 import { useSegmentDrag } from "../hooks/use-segment-drag";
 import { StoryNameForm } from "../components/story-name-form";
+import { StoryCoverPicker } from "../components/story-cover-picker";
 import { StoryActions } from "../components/story-actions";
 import { useStudio } from "../context/studio";
 import { useTimelinePlayback } from "../hooks/use-timeline-playback";
 import {
   formatDuration,
   formatRecordingDay,
+  newProjectId,
   recordingDayKey,
 } from "../utils/recordings";
 import Animated, {
@@ -32,8 +34,16 @@ import type { FlatList } from "react-native-gesture-handler";
 import type { RecordingSegment } from "../types/recording";
 
 export default function Create() {
-  const { storyOpen } = useStudio();
-  return storyOpen ? <StoryWorkspace /> : <Redirect href="/" />;
+  const { storyOpen, openStory } = useStudio();
+  // Reached from the tab bar with no story open: start a fresh one instead of bouncing to Home.
+  useEffect(() => {
+    if (!storyOpen) openStory(newProjectId());
+  }, [openStory, storyOpen]);
+  return storyOpen ? <StoryWorkspace /> : (
+    <Shell scroll={false}>
+      <ActivityIndicator accessibilityLabel="Opening a new story" className="mt-[60px]" color={colors.cocoa} />
+    </Shell>
+  );
 }
 
 function StoryWorkspace() {
@@ -45,7 +55,6 @@ function StoryWorkspace() {
   const scrollToLatest = useRef(false);
   const previousLastId = useRef<string | undefined>(undefined);
   const holding = useRef(false);
-  const [handsFree, setHandsFree] = useState(autoRecord);
   const capturing = phase === "starting" || phase === "recording";
   const finalizing = phase === "stopping" || phase === "saving";
   const fade = useSharedValue(1);
@@ -69,7 +78,6 @@ function StoryWorkspace() {
   const release = useCallback(() => {
     if (!holding.current) return;
     holding.current = false;
-    setHandsFree(false);
     void finish();
   }, [finish]);
   useEffect(() => {
@@ -145,11 +153,12 @@ function StoryWorkspace() {
           ListHeaderComponent={
             <View className="mb-7">
               <Heading>Create</Heading>
+              <StoryCoverPicker disabled={phase !== "idle" || stories.saving} />
               <StoryNameForm disabled={phase !== "idle" || stories.saving} />
               <StoryActions disabled={phase !== "idle" || dragState.dragging} />
-              <Body className="mt-2">Your story, one moment at a time.</Body>
+              
               <Body className="mt-1 !text-[12px]">
-                Hold to record. Release to add to your story.
+                Tap to record. Tap stop to add it to your story.
               </Body>
               {timeline.segments.length > 1 && <Body className="mt-1 !text-[11px]">Hold the handle on a moment to rearrange your story.</Body>}
               {timeline.loading && (
@@ -299,25 +308,20 @@ function StoryWorkspace() {
       </Animated.View>
       <View className="w-full max-w-[480px] self-center border-t border-line py-4">
         <View className="flex-row items-center gap-5">
-          {/* Keep this control mounted and enabled throughout the hold. */}
+          {/* Tap to start, tap again to stop. Keep it enabled while recording. */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={capturing && handsFree ? "Stop recording" : "Hold to record a story moment"}
-            accessibilityHint={capturing && handsFree ? "Tap to add this recording to your story." : "Press and hold while speaking. Release to add the recording to your timeline."}
+            accessibilityLabel={capturing ? "Stop recording" : "Record a story moment"}
+            accessibilityHint={capturing ? "Tap to add this recording to your story." : "Tap to start recording. Tap again when you are finished."}
             accessibilityState={{ disabled: unavailable, busy: finalizing }}
             disabled={unavailable}
-            onPressIn={() => { if (!capturing) { setHandsFree(false); holding.current = false; begin(); } }}
-            onPress={() => { if (handsFree) release(); }}
-            onPressOut={() => { if (!handsFree) release(); }}
-            // Touch end bypasses Pressable's minimum visual press duration.
-            onTouchEnd={() => { if (!handsFree) release(); }}
-            onTouchCancel={release}
+            onPress={() => { if (capturing) release(); else begin(); }}
             className={`h-24 w-24 items-center justify-center rounded-full border-[6px] ${capturing ? "border-line bg-rust" : "border-cream bg-cocoa"} ${unavailable ? "opacity-50" : ""}`}
           >
             {finalizing ? (
               <ActivityIndicator color={colors.paper} />
             ) : (
-              <Icon name={capturing && handsFree ? "stop" : "mic"} size={34} color={colors.paper} />
+              <Icon name={capturing ? "stop" : "mic"} size={34} color={colors.paper} />
             )}
           </Pressable>
           <View className="min-h-[100px] flex-1 justify-center">
@@ -337,7 +341,7 @@ function StoryWorkspace() {
                       ? "Adding your moment…"
                       : phase === "error"
                         ? "Let’s keep this moment"
-                        : "Hold to record"}
+                        : "Tap to record"}
               </Text>
             </View>
             {capturing || finalizing ? (
@@ -350,12 +354,12 @@ function StoryWorkspace() {
             ) : null}
             <Text className="mt-1 text-[12px] leading-[18px] text-muted">
               {capturing
-                ? handsFree ? "Tap stop to add to your story" : "Release to add to your story"
+                ? "Tap stop to add to your story"
                 : finalizing
                   ? "Finding its place in your timeline"
                   : !ready
                     ? "Opening your timeline…"
-                    : "Each release adds a new moment."}
+                    : "Each recording adds a new moment."}
             </Text>
           </View>
         </View>

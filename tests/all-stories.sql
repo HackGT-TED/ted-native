@@ -1,4 +1,4 @@
--- Run after migrations 003–005 against a disposable test database.
+-- Run after migrations 003–011 against a disposable test database.
 -- Uses a transaction so the test users, stories and edits are rolled back.
 begin;
 insert into auth.users(id) values ('11111111-1111-4111-8111-111111111111'), ('22222222-2222-4222-8222-222222222222');
@@ -43,7 +43,7 @@ end $$;
 select public.save_story(null, 'An empty draft', false, array[]::text[]);
 do $$ begin
   if (select count(*) from public.all_stories) <> 1 then raise exception 'Empty draft was not retained'; end if;
-  if has_function_privilege('anon', 'public.save_story(uuid,text,boolean,text[],text,text,text)', 'execute') then
+  if has_function_privilege('anon', 'public.save_story(uuid,text,boolean,text[],text,text,text,boolean,text)', 'execute') then
     raise exception 'Anonymous publishing is allowed'; end if;
 end $$;
 rollback;

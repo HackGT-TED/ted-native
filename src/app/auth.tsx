@@ -35,7 +35,7 @@ export default function AuthScreen() {
     Animated.timing(progress, { toValue: 0, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start(({ finished }) => {
       if (finished) {
         if (router.canGoBack()) router.back();
-        else router.replace('/recorder');
+        else router.replace('/');
       }
     });
   }, [progress, dragY]);

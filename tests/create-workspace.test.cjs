@@ -11,7 +11,8 @@ function setup(options = {}) {
     finish() { calls.push('finish'); recorder.phase = 'stopping'; },
   };
   const timeline = { ready: true, segments: [], refresh() {}, loading: false };
-  const studio = { recorder, timeline, stories: { saving: false }, storyOpen: options.storyOpen ?? true, autoRecord: options.autoRecord ?? false, draft: { loading: false }, consumeAutoRecord() { studio.autoRecord = false; } };
+  const studio = { recorder, timeline, stories: { saving: false }, storyOpen: options.storyOpen ?? true, autoRecord: options.autoRecord ?? false, draft: { loading: false }, consumeAutoRecord() { studio.autoRecord = false; },
+    openStory(id) { calls.push(['openStory', id]); } };
   const playback = { stop() { calls.push('pause playback'); }, toggle() {} };
   const module = load('src/app/create.tsx', {
     react: hooks.react,
@@ -24,6 +25,7 @@ function setup(options = {}) {
     '../components/recording/draggable-recording-list': { DraggableRecordingList: 'DraggableRecordingList' },
     '../hooks/use-segment-drag': { useSegmentDrag: segments => ({ data: segments, dragging: false, generation: 0 }) },
     '../components/story-name-form': { StoryNameForm: 'StoryNameForm' },
+    '../components/story-cover-picker': { StoryCoverPicker: 'StoryCoverPicker' },
     '../components/story-actions': { StoryActions: 'StoryActions' },
     '../components/shell': { Shell: 'Shell' },
     '../components/ui': { Body: 'Body', Button: 'Button', Heading: 'Heading', Icon: 'Icon', colors: {} },
@@ -36,42 +38,52 @@ function setup(options = {}) {
     ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
   const h = { calls, recorder, timeline,
     render() { h.tree = hooks.render(() => { const page = module.default(); return typeof page.type === 'function' ? page.type() : page; }); return h; },
-    button() { return nodes(h.tree).find(node => ['Hold to record a story moment', 'Stop recording'].includes(node.props?.accessibilityLabel)).props; },
+    button() { return nodes(h.tree).find(node => ['Record a story moment', 'Stop recording'].includes(node.props?.accessibilityLabel)).props; },
     unmount: hooks.unmount,
   };
   return h.render();
 }
 
-test('press down starts without a long-press threshold; touch release stops exactly once', () => {
+test('one tap starts a take and a second tap stops it exactly once', () => {
   const h = setup();
-  h.button().onPressIn();
+  assert.equal(h.button().accessibilityLabel, 'Record a story moment');
+  h.button().onPress();
   assert.deepEqual(h.calls, ['pause playback', 'start']);
   h.render();
-  assert.equal(h.button().disabled, false, 'Preparing must keep the held control enabled');
+  assert.equal(h.button().disabled, false, 'Preparing must keep the stop control enabled');
   h.recorder.phase = 'recording'; h.render();
   assert.equal(h.button().disabled, false);
+  assert.equal(h.button().accessibilityLabel, 'Stop recording');
   assert.equal(h.tree.props.quiet, true);
-  h.button().onTouchEnd();
-  h.button().onPressOut();
+  h.button().onPress();
   assert.deepEqual(h.calls, ['pause playback', 'start', 'finish']);
   h.render();
   assert.equal(h.button().disabled, true, 'Wait for finalization before the next take');
 });
 
-test('touch cancellation and navigation finish the current hold', () => {
+test('recording keeps going without holding the button', () => {
   const h = setup();
-  h.button().onPressIn(); h.button().onTouchCancel(); h.button().onPressOut();
-  assert.equal(h.calls.filter(call => call === 'finish').length, 1);
-  h.recorder.phase = 'idle'; h.render();
-  h.button().onPressIn(); h.unmount();
-  assert.equal(h.calls.filter(call => call === 'finish').length, 2);
+  h.button().onPress();
+  h.recorder.phase = 'recording'; h.render();
+  assert.equal(h.button().onPressOut, undefined);
+  assert.equal(h.button().onTouchEnd, undefined);
+  assert.equal(h.button().onTouchCancel, undefined);
+  assert.deepEqual(h.calls, ['pause playback', 'start']);
 });
 
-test('successive holds start fresh takes without a name or save action', () => {
+test('navigation finishes the current take', () => {
+  const h = setup();
+  h.button().onPress(); h.unmount();
+  assert.equal(h.calls.filter(call => call === 'finish').length, 1);
+});
+
+test('successive taps start fresh takes without a name or save action', () => {
   const h = setup();
   for (let i = 0; i < 3; i++) {
     h.recorder.phase = 'idle'; h.render();
-    h.button().onPressIn(); h.button().onPressOut();
+    h.button().onPress();
+    h.recorder.phase = 'recording'; h.render();
+    h.button().onPress();
   }
   assert.equal(h.calls.filter(call => call === 'start').length, 3);
   assert.equal(h.calls.filter(call => call === 'finish').length, 3);
@@ -81,16 +93,16 @@ test('capture is unavailable until the stored timeline is ready', () => {
   const h = setup();
   h.timeline.ready = false; h.render();
   assert.equal(h.button().disabled, true);
-  h.button().onPressIn();
   assert.deepEqual(h.calls, []);
 });
 
 
-test('a clean reload redirects the workspace to the welcome page', () => {
+test('opening Create with no story open starts a new one', () => {
   const h = setup({ storyOpen: false });
-  assert.equal(h.tree.type, 'Redirect');
-  assert.equal(h.tree.props.href, '/');
-  assert.deepEqual(h.calls, []);
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.calls[0][0], 'openStory');
+  assert.match(h.calls[0][1], /^[0-9a-f-]{36}$/);
+  assert.equal(h.tree.type, 'Shell', 'shows a spinner while the new story opens');
 });
 
 test('welcome starts one hands-free take and tapping stop saves it once', () => {
@@ -99,13 +111,9 @@ test('welcome starts one hands-free take and tapping stop saves it once', () => 
   assert.deepEqual(h.calls, ['start']);
   h.recorder.phase = 'recording'; h.render();
   assert.equal(h.button().accessibilityLabel, 'Stop recording');
-  h.button().onPressIn();
-  h.button().onTouchEnd();
-  h.button().onPressOut();
-  assert.deepEqual(h.calls, ['start']);
   h.button().onPress(); h.render();
   assert.deepEqual(h.calls, ['start', 'finish']);
   h.recorder.phase = 'idle'; h.render();
-  assert.equal(h.button().accessibilityLabel, 'Hold to record a story moment');
+  assert.equal(h.button().accessibilityLabel, 'Record a story moment');
   assert.deepEqual(h.calls, ['start', 'finish']);
 });
