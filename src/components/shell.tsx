@@ -12,6 +12,8 @@ const links = [
   { path: '/bear' as const, title: 'Bear', icon: 'bear' as const },
   { path: '/explore' as const, title: 'Explore', icon: 'search' as const },
   { path: '/library' as const, title: 'Library', icon: 'book' as const },
+  // Temporary entry point for testing read-along tracking.
+  { path: '/read-along' as const, title: 'Read', icon: 'mic' as const },
 ];
 export function Shell({ children, scroll = true, immersive = false, quiet = false, recordingOverlay }: {
   children: ReactNode; scroll?: boolean; immersive?: boolean; quiet?: boolean; recordingOverlay?: ReactNode;
