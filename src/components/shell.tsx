@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-na
 import { router, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, Icon } from './ui';
+import { BearMark } from './bear-mark';
 import { useStudio } from '../context/studio';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -36,13 +37,7 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
     <Animated.View className="flex-1" style={chromeStyle} pointerEvents={immersive ? 'none' : 'auto'} accessibilityElementsHidden={immersive} importantForAccessibility={immersive ? 'no-hide-descendants' : 'auto'}>
     <Animated.View style={quietStyle} pointerEvents={quiet ? 'none' : 'auto'} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className={`h-[72px] flex-row items-center justify-between border-b border-line ${mobile ? "px-6" : "px-12"}`}>
       <Pressable accessibilityRole="link" accessibilityLabel="TedTime home" onPress={() => router.replace('/')} className="min-h-11 flex-row items-center gap-[9px]">
-        <View accessible={false} pointerEvents="none" className="h-[25px] w-[26px]">
-          <View className="absolute left-px top-px h-[9px] w-[9px] rounded-[5px] bg-cocoa" /><View className="absolute right-px top-px h-[9px] w-[9px] rounded-[5px] bg-cocoa" />
-          <View className="absolute left-px top-[5px] h-5 w-6 rounded-[10px] bg-cocoa">
-            <View className="absolute left-1.5 top-[7px] h-[3px] w-[3px] rounded-[2px] bg-paper" /><View className="absolute right-1.5 top-[7px] h-[3px] w-[3px] rounded-[2px] bg-paper" />
-            <View className="absolute left-2.5 top-3 h-[3px] w-1 rounded-[2px] bg-paper" />
-          </View>
-        </View>
+        <BearMark />
         <Text className="text-[23px] font-bold tracking-[-1.1px] text-ink">tedtime<Text className="text-honey">.</Text></Text>
       </Pressable>
       {!mobile && <View className="flex-row gap-6">{navigation}</View>}
@@ -50,7 +45,7 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
         <Icon name="person" size={21} />{!mobile && <Text className="text-[13px] text-ink">{name ? 'Account' : 'Sign in'}</Text>}
       </Pressable>
     </Animated.View>
-    {scroll ? <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9">{content}</ScrollView> : content}
+    {scroll ? <ScrollView showsVerticalScrollIndicator={false} className="scrollbar-none" keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9">{content}</ScrollView> : content}
     {mobile && <Animated.View style={quietStyle} pointerEvents={quiet ? 'none' : 'auto'} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className="flex-row border-t border-line pb-[7px] pt-2.5">{navigation}</Animated.View>}
     </Animated.View>
     {recordingOverlay && <Animated.View className="absolute inset-0 items-center justify-center" style={overlayStyle}

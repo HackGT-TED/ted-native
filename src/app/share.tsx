@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Shell } from "../components/shell";
+import { CreateModeSwitch } from "../components/create-mode-switch";
 import { Body, Button, colors, Heading } from "../components/ui";
 import { useStudio } from "../context/studio";
 
@@ -47,7 +48,8 @@ export default function Create() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="w-full max-w-[480px] self-center pt-9"
       >
-        <Heading>{created ? "Shared." : "Create"}</Heading>
+        <CreateModeSwitch mode="written" />
+        <Heading className="mt-5">{created ? "Shared." : "Write"}</Heading>
         <Body className="mt-2">
           {created
             ? "Your creation is now in Explore."

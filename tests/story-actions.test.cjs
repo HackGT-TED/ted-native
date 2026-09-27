@@ -31,14 +31,16 @@ test('Save and Publish use the current story and report confirmed success', asyn
   const h = setup(); h.button('Save').onPress(); await h.flush();
   assert.deepEqual(h.calls[0], ['my-story', 'My story', false, ['moment-1']]);
   assert.match(h.messages(), /saved to your account/);
-  h.button('Publish').onPress(); await h.flush();
+  h.button('Publish').onPress(); h.render(); h.button('Public').onPress(); await h.flush();
   assert.equal(h.calls[1][2], true); assert.match(h.messages(), /Story published/);
 });
 
 test('unsynced moments and unnamed publications cannot be published', async () => {
-  const h = setup(); h.studio.timeline.syncPending = true; h.render(); h.button('Publish').onPress(); await h.flush();
+  const h = setup(); h.studio.timeline.syncPending = true; h.render();
+  h.button('Publish').onPress(); h.render(); h.button('Public').onPress(); await h.flush();
   assert.equal(h.calls.length, 0); assert.match(h.messages(), /finish syncing/);
-  h.studio.timeline.syncPending = false; h.studio.draft.name = ''; h.render(); h.button('Publish').onPress(); await h.flush();
+  h.studio.timeline.syncPending = false; h.studio.draft.name = ''; h.render();
+  h.button('Publish').onPress(); h.render(); h.button('Public').onPress(); await h.flush();
   assert.equal(h.calls.length, 0); assert.match(h.messages(), /name before publishing/);
   h.studio.timeline.segments = []; h.render(); assert.equal(h.button('Publish').disabled, true);
 });
@@ -48,6 +50,14 @@ test('recording locks save actions and guests are routed to sign-in', async () =
   h.button('Save').onPress(); assert.equal(h.calls.length, 0);
   h.studio.session = null; h.render(); h.button('Save').onPress();
   assert.deepEqual(h.calls, ['/auth']);
+});
+
+test('private keeps the story off the default published view', async () => {
+  const h = setup();
+  h.button('Publish').onPress(); h.render();
+  h.button('Private').onPress(); await h.flush();
+  assert.equal(h.calls[0][2], false);
+  assert.match(h.messages(), /private/i);
 });
 
 test('repeated taps only save once and errors preserve the draft for retry', async () => {

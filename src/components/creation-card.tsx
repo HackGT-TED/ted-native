@@ -17,7 +17,11 @@ export function CreationCard({ item, origin = 'explore' }: { item: Creation; ori
   return <View className="flex-row items-center gap-3 border-b border-line py-[18px]">
     <Pressable accessibilityRole="link" accessibilityLabel={`View ${item.title.replace('\n', ' ')}`} onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id, from: origin } })} className="flex-1 flex-row items-center gap-4">
       <View className="h-[62px] w-[52px] items-center justify-center rounded-[5px]" style={{ backgroundColor: item.color }}><Icon name={item.category === 'Journals' ? 'create' : 'book'} size={24} /></View>
-      <View className="flex-1 gap-[7px]"><Text className="text-[15px] font-medium leading-[21px] text-ink">{item.title.replace('\n', ' ')}</Text><Text className="text-[11px] leading-[17px] text-muted">{item.category} · {item.author}</Text></View>
+      <View className="flex-1 gap-1">
+        <Text className="text-[15px] font-medium leading-[21px] text-ink" numberOfLines={2}>{item.title.replace('\n', ' ')}</Text>
+        <Text className="text-[12px] leading-[17px] text-muted" numberOfLines={2}>{item.subtitle}</Text>
+        <Text className="text-[11px] leading-[17px] text-muted">{item.category} · {item.author}</Text>
+      </View>
     </Pressable>
     <Pressable accessibilityRole="button" accessibilityLabel={`${selected ? 'Remove from library:' : 'Save to library:'} ${item.title.replace('\n', ' ')}`} accessibilityState={{ selected }} onPress={() => toggleSave(item.id)} className="min-h-11 w-10 items-center justify-center"><Icon name={selected ? 'check' : 'heart'} size={20} color={selected ? colors.ink : colors.muted} /></Pressable>
   </View>;

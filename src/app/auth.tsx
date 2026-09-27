@@ -83,7 +83,7 @@ export default function AuthScreen() {
             <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close" className="h-11 w-11 items-center justify-center"><Icon name="close" /></Pressable>
           </View>
         </View>
-        <ScrollView className="flex-1" contentContainerClassName="grow px-6 pb-4" keyboardShouldPersistTaps="handled">
+        <ScrollView className="scrollbar-none flex-1" showsVerticalScrollIndicator={false} contentContainerClassName="grow px-6 pb-4" keyboardShouldPersistTaps="handled">
           <View className="w-full max-w-[400px] self-center">
             {!supabase ? <Body className="mt-3 text-center !text-[11px]">Sign-in isn’t available yet. Please try again later.</Body>
               : authLoading ? <ActivityIndicator accessibilityLabel="Restoring your session" color={colors.cocoa} className="mt-3 text-center !text-[11px]" />

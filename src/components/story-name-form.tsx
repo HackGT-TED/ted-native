@@ -4,14 +4,12 @@ import { colors } from './ui';
 
 export function StoryNameForm({ disabled = false }: { disabled?: boolean }) {
   const { draft } = useStudio();
-  return <View className="mb-2 mt-5 gap-2">
-    <Text nativeID="story-name-label" className="text-[13px] font-medium text-ink">Story name</Text>
+  return <View className="mb-1 mt-4 gap-2">
     <TextInput
       accessibilityLabel="Story name"
-      accessibilityLabelledBy="story-name-label"
       value={draft.name}
       onChangeText={draft.saveName}
-      placeholder="Give your story a name"
+      placeholder="Story name"
       placeholderTextColor={colors.muted}
       editable={draft.editable && !disabled}
       maxLength={80}
@@ -25,8 +23,6 @@ export function StoryNameForm({ disabled = false }: { disabled?: boolean }) {
       <Pressable accessibilityRole="button" accessibilityLabel="Retry saving story name" onPress={draft.retry} className="min-h-11 justify-center self-start pr-4">
         <Text className="text-[12px] font-medium text-cocoa">Retry</Text>
       </Pressable>
-    </View> : <Text className="text-[11px] text-muted">
-      {draft.loading ? 'Loading story name…' : draft.saving ? 'Saving…' : 'Automatically saved on this device.'}
-    </Text>}
+    </View> : null}
   </View>;
 }

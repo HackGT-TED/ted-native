@@ -1,9 +1,9 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { colors, Icon } from '../ui';
 import type { RecordingSegment } from '../../types/recording';
-import { formatDuration, formatRecordingTime } from '../../utils/recordings';
+import { formatDuration, formatRecordingDay, formatRecordingTime } from '../../utils/recordings';
 
 type Props = {
   recording: RecordingSegment;
@@ -25,41 +25,54 @@ type Props = {
 };
 
 export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recording, playing, disabled, loading, progress, playbackError, onPlay, onRetry, onRename, onDelete, drag, isDragging, position, total, onMoveEarlier, onMoveLater }: Props) {
-  const [mode, setMode] = useState<'view' | 'rename' | 'delete' | 'move'>('view');
-  const [name, setName] = useState('');
-  const time = formatRecordingTime(recording.createdAt);
-  const save = () => {
-    if (disabled || !name.trim()) return;
-    onRename(recording.id, name.trim());
-    setMode('view');
+  const [mode, setMode] = useState<'view' | 'delete' | 'move'>('view');
+  const [name, setName] = useState(recording.title);
+  const focused = useRef(false);
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTitle = useRef(recording.title);
+  savedTitle.current = recording.title;
+  useEffect(() => {
+    if (!focused.current) setName(recording.title);
+  }, [recording.title]);
+  useEffect(() => () => {
+    if (pending.current) clearTimeout(pending.current);
+  }, []);
+  const commitName = (value: string) => {
+    const next = value.trim().slice(0, 80);
+    if (!next || next === savedTitle.current || disabled) return;
+    onRename(recording.id, next);
   };
-  return <Animated.View entering={FadeInDown.duration(300).reduceMotion(ReduceMotion.System)} className="ml-2 border-l border-line pb-5 pl-6">
-    <View className="absolute -left-[5px] top-6 h-[9px] w-[9px] rounded-full bg-honey" />
-    <View className={`rounded-[20px] border bg-cream px-4 py-4 ${isDragging ? 'border-cocoa' : 'border-line'}`}>
-      {mode === 'rename' ? <View className="mb-3 gap-2">
-        <Text className="text-[12px] text-muted">Segment name</Text>
-        <TextInput accessibilityLabel="Segment name" value={name} onChangeText={setName}
-          autoFocus maxLength={80} editable={!disabled} placeholder="Name this moment"
-          placeholderTextColor={colors.muted} returnKeyType="done" onSubmitEditing={save}
-          className="min-h-12 rounded-[10px] border border-line bg-paper px-3 text-[17px] font-semibold text-ink" />
-        <View className="flex-row justify-end gap-2">
-          <Pressable accessibilityRole="button" onPress={() => setMode('view')} className="min-h-11 justify-center px-3">
-            <Text className="text-[13px] text-muted">Cancel</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Save segment name" disabled={disabled || !name.trim()}
-            accessibilityState={{ disabled: disabled || !name.trim() }} onPress={save}
-            className={`min-h-11 justify-center rounded-lg bg-cocoa px-4 ${disabled || !name.trim() ? 'opacity-50' : ''}`}>
-            <Text className="text-[13px] font-medium text-paper">Save name</Text>
-          </Pressable>
-        </View>
-      </View> : <View className="mb-3">
-        <View className="flex-row items-start gap-1">
-          <Text className="flex-1 pt-2 text-[18px] font-semibold leading-6 text-ink">{recording.title}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Rename ${recording.title}`}
-            disabled={disabled} onPress={() => { setName(recording.title); setMode('rename'); }}
-            className="h-11 w-11 items-center justify-center rounded-full active:bg-paper">
-            <Icon name="create" size={18} color={colors.muted} />
-          </Pressable>
+  const scheduleName = (value: string) => {
+    setName(value);
+    if (pending.current) clearTimeout(pending.current);
+    pending.current = setTimeout(() => commitName(value), 450);
+  };
+  const finishName = () => {
+    focused.current = false;
+    if (pending.current) clearTimeout(pending.current);
+    const next = name.trim();
+    if (!next) setName(recording.title);
+    else commitName(name);
+  };
+  const time = formatRecordingTime(recording.createdAt);
+  return <Animated.View entering={FadeInDown.duration(300).reduceMotion(ReduceMotion.System)} className="mb-3">
+    <View className={`rounded-[18px] border bg-cream px-4 py-3.5 ${isDragging ? 'border-cocoa' : 'border-line'}`}>
+      <View className="mb-2">
+        <View className="flex-row items-center gap-1">
+          <TextInput
+            accessibilityLabel={`Name for ${recording.title}`}
+            value={name}
+            onChangeText={scheduleName}
+            onFocus={() => { focused.current = true; }}
+            onBlur={finishName}
+            editable={!disabled}
+            maxLength={80}
+            placeholder="Name this moment"
+            placeholderTextColor={colors.muted}
+            returnKeyType="done"
+            submitBehavior="blurAndSubmit"
+            className="min-h-11 flex-1 text-[18px] font-semibold leading-6 text-ink"
+          />
           <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${recording.title}`}
             disabled={disabled} onPress={() => setMode('delete')}
             className="h-11 w-11 items-center justify-center rounded-full active:bg-paper">
@@ -67,9 +80,9 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
           </Pressable>
         </View>
         <Text className="mt-1 text-[11px] text-muted" style={{ fontVariant: ['tabular-nums'] }}>
-          {time} · {formatDuration(recording.durationMs)}
+          {formatRecordingDay(recording.createdAt)} · {time} · {formatDuration(recording.durationMs)}
         </Text>
-      </View>}
+      </View>
       {mode === 'move' && <View className="mb-3 flex-row flex-wrap justify-end gap-1">
         <Pressable accessibilityRole="button" disabled={disabled || position <= 1} onPress={onMoveEarlier}
           className={`min-h-11 justify-center px-3 ${position <= 1 ? 'opacity-40' : ''}`}>
@@ -115,7 +128,7 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
         {(recording.status === 'error' || recording.error || recording.changeError) && <Pressable accessibilityRole="button" onPress={() => onRetry(recording.id)} className="min-h-11 justify-center px-2">
           <Text className="text-[12px] font-medium text-rust">Retry saving</Text>
         </Pressable>}
-        {mode !== 'rename' && mode !== 'delete' && <Pressable
+        {mode !== 'delete' && <Pressable
           accessibilityRole="adjustable" accessibilityLabel={`Reorder ${recording.title}`}
           accessibilityHint="Hold and drag to change position, or tap for move controls."
           accessibilityValue={{ min: 1, max: total, now: position, text: `${position} of ${total}` }}

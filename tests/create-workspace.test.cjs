@@ -25,6 +25,7 @@ function setup(options = {}) {
     '../hooks/use-segment-drag': { useSegmentDrag: segments => ({ data: segments, dragging: false, generation: 0 }) },
     '../components/story-name-form': { StoryNameForm: 'StoryNameForm' },
     '../components/story-actions': { StoryActions: 'StoryActions' },
+    '../components/create-mode-switch': { CreateModeSwitch: 'CreateModeSwitch' },
     '../components/shell': { Shell: 'Shell' },
     '../components/ui': { Body: 'Body', Button: 'Button', Heading: 'Heading', Icon: 'Icon', colors: {} },
     '../components/recording/recording-timeline-item': { RecordingTimelineItem: 'TimelineItem' },
@@ -36,42 +37,45 @@ function setup(options = {}) {
     ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
   const h = { calls, recorder, timeline,
     render() { h.tree = hooks.render(() => { const page = module.default(); return typeof page.type === 'function' ? page.type() : page; }); return h; },
-    button() { return nodes(h.tree).find(node => ['Hold to record a story moment', 'Stop recording'].includes(node.props?.accessibilityLabel)).props; },
+    button() { return nodes(h.tree).find(node => ['Record a moment', 'Stop recording'].includes(node.props?.accessibilityLabel)).props; },
     unmount: hooks.unmount,
   };
   return h.render();
 }
 
-test('press down starts without a long-press threshold; touch release stops exactly once', () => {
+test('a tap starts a take and the next tap stops it once', () => {
   const h = setup();
-  h.button().onPressIn();
+  h.button().onPress();
   assert.deepEqual(h.calls, ['pause playback', 'start']);
   h.render();
-  assert.equal(h.button().disabled, false, 'Preparing must keep the held control enabled');
+  assert.equal(h.button().disabled, false, 'Preparing must keep the record control enabled');
   h.recorder.phase = 'recording'; h.render();
   assert.equal(h.button().disabled, false);
+  assert.equal(h.button().accessibilityLabel, 'Stop recording');
   assert.equal(h.tree.props.quiet, true);
-  h.button().onTouchEnd();
-  h.button().onPressOut();
+  h.button().onPress();
   assert.deepEqual(h.calls, ['pause playback', 'start', 'finish']);
-  h.render();
+  h.recorder.phase = 'stopping'; h.render();
   assert.equal(h.button().disabled, true, 'Wait for finalization before the next take');
 });
 
-test('touch cancellation and navigation finish the current hold', () => {
+test('leaving the page finishes the current take', () => {
   const h = setup();
-  h.button().onPressIn(); h.button().onTouchCancel(); h.button().onPressOut();
+  h.button().onPress();
+  h.unmount();
   assert.equal(h.calls.filter(call => call === 'finish').length, 1);
   h.recorder.phase = 'idle'; h.render();
-  h.button().onPressIn(); h.unmount();
+  h.button().onPress(); h.unmount();
   assert.equal(h.calls.filter(call => call === 'finish').length, 2);
 });
 
-test('successive holds start fresh takes without a name or save action', () => {
+test('successive taps start fresh takes without a name or save action', () => {
   const h = setup();
   for (let i = 0; i < 3; i++) {
     h.recorder.phase = 'idle'; h.render();
-    h.button().onPressIn(); h.button().onPressOut();
+    h.button().onPress();
+    h.recorder.phase = 'recording'; h.render();
+    h.button().onPress();
   }
   assert.equal(h.calls.filter(call => call === 'start').length, 3);
   assert.equal(h.calls.filter(call => call === 'finish').length, 3);
@@ -81,7 +85,7 @@ test('capture is unavailable until the stored timeline is ready', () => {
   const h = setup();
   h.timeline.ready = false; h.render();
   assert.equal(h.button().disabled, true);
-  h.button().onPressIn();
+  h.button().onPress();
   assert.deepEqual(h.calls, []);
 });
 
@@ -99,13 +103,9 @@ test('welcome starts one hands-free take and tapping stop saves it once', () => 
   assert.deepEqual(h.calls, ['start']);
   h.recorder.phase = 'recording'; h.render();
   assert.equal(h.button().accessibilityLabel, 'Stop recording');
-  h.button().onPressIn();
-  h.button().onTouchEnd();
-  h.button().onPressOut();
-  assert.deepEqual(h.calls, ['start']);
   h.button().onPress(); h.render();
   assert.deepEqual(h.calls, ['start', 'finish']);
   h.recorder.phase = 'idle'; h.render();
-  assert.equal(h.button().accessibilityLabel, 'Hold to record a story moment');
+  assert.equal(h.button().accessibilityLabel, 'Record a moment');
   assert.deepEqual(h.calls, ['start', 'finish']);
 });

@@ -14,35 +14,80 @@ export type Creation = {
   subtitle: string;
   illustrated?: boolean;
 };
+/** Placeholder community pieces. Replace these with real stories when they are ready. */
 export const originals: Creation[] = [{
-  id: 'woodland',
-  title: 'The Woodland\nCompanion',
-  author: 'Florence & Fern',
+  id: 'lantern-creek',
+  title: 'The Lantern by the Creek',
+  author: 'Mira Ellison',
   category: 'Stories',
   color: '#E4CDB0',
-  subtitle: 'A collection of small adventures',
+  subtitle: 'A paper lantern drifts downstream, and a child follows it into the evening her grandmother never finished telling.',
   illustrated: true
 }, {
-  id: 'ordinary',
-  title: 'The art of\nordinary days',
-  author: 'Eleanor Rose',
+  id: 'shoes-door',
+  title: 'Shoes by the Door',
+  author: 'Jonah Adeyemi',
   category: 'Journals',
   color: '#EEDFCB',
-  subtitle: 'A journal for noticing more'
+  subtitle: 'Notes from the first week of living alone, written in the quiet between locking the door and turning on the lamp.'
 }, {
-  id: 'wildflowers',
-  title: 'Wildflowers\n& little wonders',
-  author: 'The Quiet Studio',
-  category: 'Art',
-  color: '#DBC4A6',
-  subtitle: 'Botanical notes from the meadow'
-}, {
-  id: 'sunday',
-  title: 'A pocketful\nof Sundays',
-  author: 'Oliver Moss',
+  id: 'salt-windowsill',
+  title: 'Salt on the Windowsill',
+  author: 'Helen Cho',
   category: 'Stories',
   color: '#E7CBBB',
-  subtitle: 'Stories for taking your time'
+  subtitle: 'In a seaside town, every house keeps a dish of salt so the rooms remember who has come home.'
+}, {
+  id: 'market-breakfast',
+  title: 'The Market Before Breakfast',
+  author: 'Rafael Ortiz',
+  category: 'Journals',
+  color: '#DBC4A6',
+  subtitle: 'A walk through the stalls at dawn, stall by stall, before the city starts performing for the day.'
+}, {
+  id: 'paper-boats',
+  title: 'Paper Boats in August',
+  author: 'Amina Diallo',
+  category: 'Stories',
+  color: '#E4CDB0',
+  subtitle: 'Two cousins send secrets across a flooded street and wait to see which ones find their way back.'
+}, {
+  id: 'back-step',
+  title: 'Field Guide to the Back Step',
+  author: 'The Marigold Press',
+  category: 'Art',
+  color: '#EEDFCB',
+  subtitle: 'Drawings of the moths, cracks, and coffee rings that collected on one porch over a single summer.',
+  illustrated: true
+}, {
+  id: 'kitchen-heard',
+  title: 'What the Kitchen Heard',
+  author: 'Priya Raman',
+  category: 'Stories',
+  color: '#DBC4A6',
+  subtitle: 'A family recipe told the way the room remembers it: who laughed, who burned the onions, who stayed to wash up.'
+}, {
+  id: 'library-letters',
+  title: 'Letters Left in Library Books',
+  author: 'Edith Lang',
+  category: 'Journals',
+  color: '#E7CBBB',
+  subtitle: 'Short letters slipped into returned books. None of them are addressed. All of them were meant.'
+}, {
+  id: 'orange-tree',
+  title: 'The Orange Tree Upstairs',
+  author: 'Mateo Alvarez',
+  category: 'Stories',
+  color: '#E4CDB0',
+  subtitle: 'A building agrees to keep an orange tree on the roof if the tenants will tell it one true thing each week.'
+}, {
+  id: 'blue-thread',
+  title: 'Blue Thread, Loose Button',
+  author: 'Naomi Berg',
+  category: 'Art',
+  color: '#EEDFCB',
+  subtitle: 'Studies of clothes people could not throw away, and the afternoons still caught in the seams.',
+  illustrated: true
 }];
 type Studio = {
   storyId: string | null;

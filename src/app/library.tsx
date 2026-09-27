@@ -49,7 +49,8 @@ export default function Library() {
   const items = all.filter(item => filter === 'all' || item.status === filter);
   const bookmarks = creations.filter(item => saved.includes(item.id));
   return <Shell scroll={false}>
-    <FlatList className="w-full max-w-[700px] flex-1 self-center" contentContainerClassName="pb-8 pt-9"
+    <FlatList className="scrollbar-none w-full max-w-[700px] flex-1 self-center" contentContainerClassName="pb-8 pt-9"
+      showsVerticalScrollIndicator={false}
       data={items} keyExtractor={item => item.id ?? 'legacy'} renderItem={({ item }) => <StoryCard item={item} />}
       refreshing={stories.loading || timeline.loading} onRefresh={() => { void refresh(); void refreshTimeline(); }}
       ListHeaderComponent={<View className="mb-6">

@@ -1,10 +1,14 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Shell } from '../components/shell';
+import { Onboarding } from '../components/onboarding';
 import { Body, Button, colors, Icon, Label } from '../components/ui';
 import { useStudio } from '../context/studio';
 import { formatRecordingDay } from '../utils/recordings';
+
+const ONBOARDING_KEY = 'tedtime.onboarding.v1';
 
 // Project IDs identify drafts; authentication and ownership are enforced separately.
 function newProjectId() {
@@ -15,9 +19,25 @@ function newProjectId() {
 }
 
 export default function Welcome() {
-  const { timeline, recorder, openStory } = useStudio();
+  const { timeline, recorder, openStory, session, authLoading } = useStudio();
   const opening = useRef(false);
+  const [seen, setSeen] = useState<boolean | null>(null);
   useFocusEffect(useCallback(() => { opening.current = false; }, []));
+  useEffect(() => {
+    let live = true;
+    AsyncStorage.getItem(ONBOARDING_KEY).then(value => {
+      if (live) setSeen(value === 'done');
+    }).catch(() => { if (live) setSeen(false); });
+    return () => { live = false; };
+  }, []);
+  useEffect(() => {
+    if (!session || seen !== false) return;
+    let live = true;
+    void AsyncStorage.setItem(ONBOARDING_KEY, 'done').then(() => {
+      if (live) setSeen(true);
+    });
+    return () => { live = false; };
+  }, [session, seen]);
   const unavailable = !timeline.ready || recorder.phase !== 'idle';
   const enter = (id: string | null, record = false) => {
     if (unavailable || opening.current) return;
@@ -25,34 +45,57 @@ export default function Welcome() {
     openStory(id, record);
     router.push('/create');
   };
+  const skip = () => {
+    void AsyncStorage.setItem(ONBOARDING_KEY, 'done');
+    setSeen(true);
+  };
+
+  if (authLoading || seen === null) {
+    return <View className="flex-1 items-center justify-center bg-paper"><ActivityIndicator color={colors.cocoa} /></View>;
+  }
+  if (!seen && !session) {
+    return <Onboarding onSignIn={() => router.push('/auth')} onSkip={skip} />;
+  }
 
   return (
     <Shell>
-      <View className="w-full max-w-[480px] self-center items-center pb-8 pt-12">
-        <Label>WELCOME TO TEDTIME</Label>
-        <Text accessibilityRole="header" className="mt-5 text-center font-heading text-[46px] font-normal leading-[54px] tracking-[-1.4px] text-ink">
-          Every story starts{'\n'}with your voice.
+      <View className="w-full max-w-[480px] self-center pb-8 pt-8">
+        <Label>TEDTIME</Label>
+        <Text accessibilityRole="header" className="mt-4 font-heading text-[42px] font-normal leading-[46px] tracking-[-1.2px] text-ink">
+          What do you want to make?
         </Text>
-        <Body className="mt-4 max-w-[310px] text-center">
-          A little memory. A big adventure. A moment worth keeping. Let’s tell your story.
-        </Body>
-        <View className="my-9 h-[208px] w-[208px] items-center justify-center rounded-full border border-line">
-          <View className="h-[184px] w-[184px] items-center justify-center rounded-full bg-cream">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Start recording a new story"
-              accessibilityHint="Creates a new story and opens the microphone. Tap stop when you are finished."
-              accessibilityState={{ disabled: unavailable, busy: !timeline.ready }}
-              disabled={unavailable}
-              onPress={() => enter(newProjectId(), true)}
-              className={`h-40 w-40 items-center justify-center rounded-full bg-cocoa active:opacity-80 ${unavailable ? 'opacity-50' : ''}`}
-            >
-              {!timeline.ready ? <ActivityIndicator color={colors.paper} /> : <Icon name="mic" size={66} color={colors.paper} />}
-            </Pressable>
+        <Body className="mt-3 max-w-[340px]">Record a voice story, or write one to share.</Body>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Record a new story"
+          accessibilityHint="Opens a new story and starts the microphone."
+          accessibilityState={{ disabled: unavailable, busy: !timeline.ready }}
+          disabled={unavailable}
+          onPress={() => enter(newProjectId(), true)}
+          className={`mt-8 min-h-[112px] flex-row items-center gap-4 rounded-[20px] bg-cocoa px-5 py-5 active:opacity-80 ${unavailable ? 'opacity-50' : ''}`}
+        >
+          <View className="h-16 w-16 items-center justify-center rounded-full bg-cream">
+            {!timeline.ready ? <ActivityIndicator color={colors.cocoa} /> : <Icon name="mic" size={32} color={colors.cocoa} />}
           </View>
-        </View>
-        <Text className="text-[18px] font-medium text-ink">Tap to start your story</Text>
-        <Body className="mt-2 max-w-[280px] text-center !text-[13px]">We’ll create a new project as you begin. Just bring your voice.</Body>
+          <View className="flex-1">
+            <Text className="text-[18px] font-medium text-paper">Record a story</Text>
+            <Text className="mt-1 text-[13px] leading-5 text-paper">Start with your voice. Add more moments on the story page.</Text>
+          </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Write a story"
+          onPress={() => router.push('/share')}
+          className="mt-3 min-h-[112px] flex-row items-center gap-4 rounded-[20px] border border-line bg-cream px-5 py-5 active:opacity-80"
+        >
+          <View className="h-16 w-16 items-center justify-center rounded-full bg-paper">
+            <Icon name="create" size={30} color={colors.cocoa} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-[18px] font-medium text-ink">Write a story</Text>
+            <Text className="mt-1 text-[13px] leading-5 text-muted">Share a written creation with a title and a few words.</Text>
+          </View>
+        </Pressable>
         {timeline.diskError && <View className="mt-5 gap-3">
           <Text accessibilityRole="alert" className="text-center text-[13px] text-rust">{timeline.diskError}</Text>
           <Button title="Retry device storage" secondary onPress={timeline.retryLocalSave} />
