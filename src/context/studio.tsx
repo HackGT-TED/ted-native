@@ -9,6 +9,7 @@ import { useSavedStories } from '../hooks/use-saved-stories';
 import { useStoryCover } from '../hooks/use-story-cover';
 import { useInbox } from '../hooks/use-inbox';
 import { useFamily } from '../hooks/use-family';
+import { useReadingAutoSave } from '../hooks/use-reading-autosave';
 export type Creation = {
   id: string;
   title: string;
@@ -74,6 +75,8 @@ export function StudioProvider({
   const draft = useStoryDraft(owner, authLoading, currentStory?.id ?? null, savedStory?.title);
   const cover = useStoryCover(owner, authLoading, currentStory?.id ?? null, savedStory?.cover_path);
   const recorder = useAudioCapture(timeline.addRecording);
+  // Read-along stories save themselves once their clips upload, even after leaving the reader.
+  useReadingAutoSave(owner, currentStory?.id ?? null, timeline, stories, draft.name);
   const [creations, setCreations] = useState(originals);
   const [saved, setSaved] = useState<string[]>([]);
   return <Context.Provider value={{

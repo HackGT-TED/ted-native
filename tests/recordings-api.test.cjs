@@ -144,6 +144,15 @@ test('browser codec parameters are normalized while preserving the file format',
   }
 });
 
+test('MP3 clips are stored as audio/mpeg, which the bucket allows', async () => {
+  for (const type of ['audio/mpeg', 'audio/mp3']) {
+    const h = setup();
+    assert.equal((await h.post(request({ audio: new Blob(['audio'], { type }) }))).status, 201);
+    assert.ok(h.uploads[0].path.endsWith('.mp3'));
+    assert.equal(h.uploads[0].config.contentType, 'audio/mpeg');
+  }
+});
+
 test('oversized files and requests are rejected, including without Content-Length', async () => {
   const h = setup();
   assert.equal((await h.post(request({}, { 'Content-Length': String(27 * 1024 * 1024) }))).status, 413);

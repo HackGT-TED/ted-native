@@ -9,6 +9,9 @@ const AUDIO_TYPES: Record<string, string> = {
   "audio/m4a": "m4a",
   "audio/webm": "webm",
   "audio/ogg": "ogg",
+  // Read-along clips are the audio streamed to speech recognition, encoded as MP3.
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
 };
 
 function error(message: string, status: number, code?: string) {
@@ -143,7 +146,7 @@ export async function POST(request: Request): Promise<Response> {
     const contentType = audio.type.split(";")[0].trim().toLowerCase();
     const extension = AUDIO_TYPES[contentType];
     if (!extension)
-      return error("Upload an M4A, WebM, or Ogg audio recording.", 415);
+      return error("Upload an M4A, WebM, Ogg, or MP3 audio recording.", 415);
     if (
       typeof title !== "string" ||
       !title.trim() ||
@@ -178,7 +181,8 @@ export async function POST(request: Request): Promise<Response> {
     const { data, error: storageError } = await supabase.storage
       .from(BUCKET)
       .upload(path, await audio.arrayBuffer(), {
-        contentType,
+        // The bucket allows audio/mpeg (published stories are MP3), not the audio/mp3 alias.
+        contentType: extension === "mp3" ? "audio/mpeg" : contentType,
         upsert: false,
         metadata: { title: title.trim(), durationMs, recordedAt, position: Number(position), segmentId: id },
       });

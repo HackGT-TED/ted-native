@@ -27,6 +27,7 @@ function setup(options = {}) {
     '../components/story-title': { StoryTitle: 'StoryTitle' },
     '../components/story-cover-picker': { StoryCoverPicker: 'StoryCoverPicker' },
     '../components/story-actions': { StoryActions: 'StoryActions' },
+    '../components/read-along/continue-reading': { ContinueReading: 'ContinueReading' },
     '../components/shell': { Shell: 'Shell' },
     '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Body: 'Body', Button: 'Button', Heading: 'Heading', Icon: 'Icon', colors: {} },

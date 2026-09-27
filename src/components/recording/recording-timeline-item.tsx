@@ -35,18 +35,8 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
     onRename(recording.id, name.trim());
     setMode('view');
   };
-  return <Animated.View entering={FadeInDown.duration(300).reduceMotion(ReduceMotion.System)} className="flex-row gap-3">
-    <View className="w-8 shrink-0 items-center" pointerEvents="none">
-      {position > 1 && <View className="absolute top-0 h-10 w-px bg-line" />}
-      {position < total && <View className="absolute bottom-0 top-10 w-px bg-line" />}
-      <View accessible accessibilityRole="text"
-        accessibilityLabel={`Chapter ${position} of ${total}${playing ? ', playing' : loading ? ', loading' : ''}`}
-        className={`mt-6 min-h-8 w-8 items-center justify-center rounded-full border py-1 ${highlighted ? 'border-cocoa bg-cocoa' : 'border-line bg-paper'}`}>
-        <Text className={`text-[12px] font-semibold ${highlighted ? 'text-paper' : 'text-cocoa'}`}
-          style={{ fontVariant: ['tabular-nums'] }}>{position}</Text>
-      </View>
-    </View>
-    <View className="min-w-0 flex-1 pb-5">
+  return <Animated.View entering={FadeInDown.duration(300).reduceMotion(ReduceMotion.System)}>
+    <View className="pb-5">
     <View className={`rounded-[20px] border bg-cream px-4 py-4 ${isDragging ? 'border-cocoa' : 'border-line'}`}>
       {mode === 'rename' ? <View className="mb-3 gap-2">
         <Text className="text-[12px] text-muted">Segment name</Text>
@@ -118,16 +108,16 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
           <View className="h-full rounded-full bg-cocoa" style={{ width: `${progress * 100}%` }} />
         </View>
       </View>}
-      <View className="mt-2 flex-row items-center justify-between">
-        <Text accessibilityLiveRegion="polite" className="text-[11px] text-muted">
-          {recording.changeError ? 'Changes waiting to sync' : recording.pendingChange ? 'Saving changes…'
-            : recording.status === 'uploading' ? 'Saving to your account…' : recording.status === 'error' ? 'Waiting to sync'
-            : recording.status === 'local' ? 'On this device' : 'Saved'}
-        </Text>
-        {(recording.status === 'error' || recording.error || recording.changeError) && <Pressable accessibilityRole="button" onPress={() => onRetry(recording.id)} className="min-h-11 justify-center px-2">
-          <Text className="text-[12px] font-medium text-rust">Retry saving</Text>
-        </Pressable>}
-        {mode !== 'rename' && mode !== 'delete' && <Pressable
+      {/* Footer: sync status on the left, the drag handle centered, retry and position on the right. */}
+      <View className="mt-2 flex-row items-center">
+        <View className="min-w-0 flex-1 flex-row items-center">
+          <Text numberOfLines={1} accessibilityLiveRegion="polite" className="shrink text-[11px] text-muted">
+            {recording.changeError ? 'Changes waiting to sync' : recording.pendingChange ? 'Saving changes…'
+              : recording.status === 'uploading' ? 'Saving to your account…' : recording.status === 'error' ? 'Waiting to sync'
+              : recording.status === 'local' ? 'On this device' : 'Saved'}
+          </Text>
+        </View>
+        {mode !== 'rename' && mode !== 'delete' ? <Pressable
           accessibilityRole="adjustable" accessibilityLabel={`Reorder ${recording.title}`}
           accessibilityHint="Hold and drag to change position, or tap for move controls."
           accessibilityValue={{ min: 1, max: total, now: position, text: `${position} of ${total}` }}
@@ -141,7 +131,18 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
           onLongPress={drag} onPress={() => setMode(mode === 'move' ? 'view' : 'move')}
           className={`h-11 w-11 items-center justify-center rounded-full active:bg-paper ${total < 2 ? 'opacity-40' : ''}`}>
           <Icon name="drag" size={24} color={colors.cocoa} />
-        </Pressable>}
+        </Pressable> : <View className="w-11" />}
+        <View className="flex-1 flex-row items-center justify-end gap-1">
+          {(recording.status === 'error' || recording.error || recording.changeError) && <Pressable accessibilityRole="button" onPress={() => onRetry(recording.id)} className="min-h-11 justify-center px-2">
+            <Text className="text-[12px] font-medium text-rust">Retry saving</Text>
+          </Pressable>}
+          <View accessible accessibilityRole="text"
+            accessibilityLabel={`Chapter ${position} of ${total}${playing ? ', playing' : loading ? ', loading' : ''}`}
+            className={`h-7 min-w-7 items-center justify-center rounded-full border px-1.5 ${highlighted ? 'border-cocoa bg-cocoa' : 'border-line bg-paper'}`}>
+            <Text className={`text-[12px] font-semibold ${highlighted ? 'text-paper' : 'text-cocoa'}`}
+              style={{ fontVariant: ['tabular-nums'] }}>{position}</Text>
+          </View>
+        </View>
       </View>
       {(recording.error || recording.changeError || playbackError) && <Text accessibilityRole="alert" className="mt-2 text-[12px] leading-[18px] text-rust">{playbackError || recording.changeError || recording.error}</Text>}
     </View>
