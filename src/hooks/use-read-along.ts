@@ -4,11 +4,11 @@ import { AudioModule, useAudioStream, type AudioStreamBuffer } from 'expo-audio'
 import { File, Paths } from 'expo-file-system';
 import { fetchDeepgramToken, listenUrl, type DeepgramResult } from '../services/deepgram';
 import { alignSpokenWords, scriptKeyterms, tokenizeScript } from '../utils/read-along';
-import { encodeWav } from '../utils/wav';
+import { createMp3Writer } from '../utils/mp3';
 
 export type ReadAlongPhase = 'idle' | 'connecting' | 'listening' | 'stopping' | 'error';
 /**
- * A finished take: the audio streamed for tracking, saved as a WAV file, and the
+ * A finished take: the audio streamed for tracking, saved as an MP3 file, and the
  * script words it covered (`fromWord` to `toWord`, inclusive; -1 if none were read).
  */
 export type ReadAlongTake = { uri: string; duration: number; recordedAt: string; fromWord: number; toWord: number };
@@ -18,8 +18,8 @@ const SAMPLE_RATE = 16000;
 // Audio captured while the socket opens (~100 ms buffers) is replayed, so reading can start at once.
 const MAX_QUEUED_BUFFERS = 50;
 const CLOSE_TIMEOUT_MS = 3000;
-// Clip uploads are capped at 25 MB; 16 kHz WAV is ~1.9 MB a minute, so a take stops at 13 minutes.
-export const MAX_TAKE_MS = 13 * 60 * 1000;
+// Clip uploads are capped at 25 MB; 48 kbps MP3 is ~360 KB a minute, so 30 minutes is well within it.
+export const MAX_TAKE_MS = 30 * 60 * 1000;
 const MIN_TAKE_MS = 1000;
 // Speaking pace in ms per word, measured from Deepgram's word timestamps.
 const DEFAULT_PACE_MS = 400;
@@ -63,15 +63,24 @@ export function useReadAlong(script: string, { onRecorded }: { onRecorded?: (tak
   const wordsRef = useRef(words);
   useEffect(() => { wordsRef.current = words; }, [words]);
   const paceRef = useRef(DEFAULT_PACE_MS);
-  const take = useRef<{ chunks: ArrayBuffer[]; bytes: number; rate: number; startedAt: string; fromWord: number } | null>(null);
+  const take = useRef<{
+    writer: ReturnType<typeof createMp3Writer> | null; failed: boolean;
+    bytes: number; rate: number; startedAt: string; fromWord: number;
+  } | null>(null);
   const onRecordedRef = useRef(onRecorded);
   useEffect(() => { onRecordedRef.current = onRecorded; }, [onRecorded]);
   const stopRef = useRef<() => void>(() => {});
 
   const onBuffer = useCallback((buffer: AudioStreamBuffer) => {
     const recording = take.current;
-    if (recording) {
-      recording.chunks.push(buffer.data);
+    if (recording && !recording.failed) {
+      try {
+        // The encoder needs the rate the hardware actually delivers, known from the first buffer.
+        recording.writer ??= createMp3Writer(buffer.sampleRate);
+        recording.writer.write(buffer.data);
+      } catch {
+        recording.failed = true;
+      }
       recording.bytes += buffer.data.byteLength;
       recording.rate = buffer.sampleRate;
       const ms = (recording.bytes / 2 / buffer.sampleRate) * 1000;
@@ -89,17 +98,18 @@ export function useReadAlong(script: string, { onRecorded }: { onRecorded?: (tak
     setPhase(next);
   }, []);
 
-  /** Ends audio capture and, unless discarding, writes the take to a WAV file and delivers it. */
+  /** Ends audio capture and, unless discarding, writes the take to an MP3 file and delivers it. */
   const finishTake = useCallback((deliver: boolean) => {
     const recording = take.current;
     take.current = null;
     if (!recording || !deliver || !onRecordedRef.current) return;
     const duration = Math.round((recording.bytes / 2 / recording.rate) * 1000);
-    if (duration < MIN_TAKE_MS) return;
+    if (duration < MIN_TAKE_MS || !recording.writer) return;
     try {
-      const file = new File(Paths.document, `reading-${Date.now()}.wav`);
+      if (recording.failed) throw new Error('The take could not be encoded.');
+      const file = new File(Paths.document, `reading-${Date.now()}.mp3`);
       file.create();
-      file.write(encodeWav(recording.chunks, recording.rate));
+      file.write(recording.writer.finish());
       onRecordedRef.current({ uri: file.uri, duration, recordedAt: recording.startedAt,
         fromWord: recording.fromWord, toWord: shown.current - 1 });
     } catch {
@@ -168,7 +178,8 @@ export function useReadAlong(script: string, { onRecorded }: { onRecorded?: (tak
       const token = fetchDeepgramToken();
       token.catch(() => {}); // Awaited below; avoids an unhandled rejection while the mic starts.
       if (onRecordedRef.current) {
-        take.current = { chunks: [], bytes: 0, rate: SAMPLE_RATE, startedAt: new Date().toISOString(), fromWord: shown.current };
+        take.current = { writer: null, failed: false, bytes: 0, rate: SAMPLE_RATE,
+          startedAt: new Date().toISOString(), fromWord: shown.current };
       }
       await stream.start();
       if (id !== session.current) { stream.stop(); return; }

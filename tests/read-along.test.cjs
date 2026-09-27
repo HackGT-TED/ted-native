@@ -151,3 +151,21 @@ test('token route rejects missing sessions, missing config, and Deepgram failure
   assert.equal(response.status, 502);
   assert.doesNotMatch(await response.text(), /secret/);
 });
+
+test('the MP3 writer encodes streamed PCM buffers into one playable MP3', async () => {
+  const lame = await import('@breezystack/lamejs');
+  const { createMp3Writer } = load('src/utils/mp3.ts', { require: () => lame, Uint8Array, Int16Array });
+  const writer = createMp3Writer(16000);
+  // Two seconds of a 440 Hz tone in 100 ms buffers, as the microphone stream delivers them.
+  for (let buffer = 0; buffer < 20; buffer++) {
+    const pcm = new Int16Array(1600);
+    for (let i = 0; i < pcm.length; i++) pcm[i] = Math.round(8000 * Math.sin(2 * Math.PI * 440 * (buffer * 1600 + i) / 16000));
+    writer.write(pcm.buffer);
+  }
+  const mp3 = writer.finish();
+  // Every MP3 frame starts with an 11-bit sync word.
+  assert.equal(mp3[0], 0xff);
+  assert.equal(mp3[1] & 0xe0, 0xe0);
+  // 48 kbps for two seconds is about 12 KB.
+  assert.ok(mp3.length > 10_000 && mp3.length < 14_000, `unexpected size ${mp3.length}`);
+});

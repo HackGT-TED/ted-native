@@ -144,12 +144,12 @@ test('browser codec parameters are normalized while preserving the file format',
   }
 });
 
-test('WAV variants from each platform are stored as audio/wav', async () => {
-  for (const type of ['audio/wav', 'audio/x-wav', 'audio/vnd.wave']) {
+test('MP3 clips are stored as audio/mpeg, which the bucket allows', async () => {
+  for (const type of ['audio/mpeg', 'audio/mp3']) {
     const h = setup();
     assert.equal((await h.post(request({ audio: new Blob(['audio'], { type }) }))).status, 201);
-    assert.ok(h.uploads[0].path.endsWith('.wav'));
-    assert.equal(h.uploads[0].config.contentType, 'audio/wav');
+    assert.ok(h.uploads[0].path.endsWith('.mp3'));
+    assert.equal(h.uploads[0].config.contentType, 'audio/mpeg');
   }
 });
 
