@@ -61,9 +61,9 @@ export function useReadAlong(script: string) {
   const handleResult = useCallback((result: DeepgramResult) => {
     const alternative = result.channel?.alternatives?.[0];
     if (!alternative) return;
-    const { position, relocated } = alignSpokenWords(wordsRef.current, alternative.words.map(w => w.word), committed.current);
+    const position = alignSpokenWords(wordsRef.current, alternative.words.map(w => w.word), committed.current);
     if (result.is_final) committed.current = position;
-    moveTo(position, result.is_final || relocated);
+    moveTo(position, result.is_final);
     if (alternative.transcript) setHeard(alternative.transcript);
   }, [moveTo]);
 

@@ -26,36 +26,50 @@ test('tokenizes words, folds stray punctuation into a neighbor, and normalizes n
 });
 
 test('follows words in order and ignores filler and misrecognitions', () => {
-  assert.equal(read('once upon um a time').position, 4);
-  assert.equal(read('once upon xyzzy a').position, 3);
+  assert.equal(read('once upon um a time'), 4);
+  assert.equal(read('once upon xyzzy a'), 3);
+});
+
+test('a wrong word never jumps ahead to where that word appears later', () => {
+  // Expecting "counted"; "three" and "bear" both appear further down the script.
+  assert.equal(read('three', 9), 9);
+  assert.equal(read('bear', 9), 9);
+  assert.equal(read('three counted', 9), 10);
+});
+
+test('never skips a word, even a distinctive one', () => {
+  assert.equal(read('bear named', 5), 5);
+  assert.equal(read('little bear named', 5), 8);
+});
+
+test('backtracking is ignored until the expected word is heard', () => {
+  assert.equal(read('a little bear named tedward', 9), 9);
+  assert.equal(read('a little bear named tedward counted the', 9), 11);
 });
 
 test('interim revisions re-aligned from the committed position do not drift', () => {
-  // Deepgram first hears "bare", then revises to "bear" on the same audio.
-  assert.equal(read('a little bare', 4).position, 6);
-  assert.equal(read('a little bear', 4).position, 7);
+  // Deepgram first hears "pear", then revises to "bear" on the same audio.
+  assert.equal(read('a little pear', 4), 6);
+  assert.equal(read('a little bear', 4), 7);
+});
+
+test('homophones count as the expected word', () => {
+  assert.equal(read('won to three', 12), 15);
+  assert.equal(read('bare', 6), 7);
+});
+
+test('handles the recognizer splitting or joining words', () => {
+  assert.equal(read('ted ward counted', 8), 10);
+  assert.equal(alignSpokenWords(tokenizeScript('Every one smiled.'), ['everyone', 'smiled'], 0), 3);
 });
 
 test('tolerates small recognition errors in longer words but not short ones', () => {
-  assert.equal(read('named tedwart', 7).position, 9);
-  assert.equal(read('a', 6).position, 6);
+  assert.equal(read('named tedwart', 7), 9);
+  assert.equal(read('an', 4), 4);
 });
 
-test('follows a skipped word only when the landing is trustworthy', () => {
-  // Skipping "little" onto distinctive "bear" is followed.
-  assert.equal(read('bear named', 5).position, 8);
-  // Jumping from "once" to a later "a" on a common word alone is not.
-  assert.equal(read('the', 0).position, 0);
-});
-
-test('repeating the current word does not count toward relocation', () => {
-  assert.equal(read('the the the stars', 10).position, 12);
-});
-
-test('relocates when the reader jumps back to reread a phrase', () => {
-  const { position, relocated } = read('once upon a time', 14);
-  assert.equal(relocated, true);
-  assert.equal(position, 4);
+test('stops at the end of the script', () => {
+  assert.equal(read('bear slept slept the end', 17), script.length);
 });
 
 test('keyterms pick names and long words without duplicates', () => {

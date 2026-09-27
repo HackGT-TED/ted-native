@@ -1,14 +1,6 @@
 /** A display token from the script. `key` is the normalized form used for matching. */
 export type ScriptWord = { text: string; key: string };
 
-/** Script positions are "next expected word" indices; the current word is `position - 1`. */
-export type Alignment = { position: number; relocated: boolean };
-
-// How far ahead a spoken word may land when the reader skips words or the recognizer drops them.
-const MAX_SKIP = 6;
-// Consecutive unmatched words before searching the whole script for where the reader went.
-const RELOCATE_AFTER = 3;
-const RELOCATE_WINDOW = 3;
 const STOPWORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'had', 'has', 'have', 'he',
   'her', 'his', 'i', 'in', 'is', 'it', 'its', 'me', 'my', 'no', 'not', 'of', 'on', 'or', 'said', 'she',
@@ -53,65 +45,52 @@ function distance(a: string, b: string): number {
   return previous[b.length];
 }
 
-/** Short words must match exactly; longer ones tolerate about one error per four letters. */
+// Speech recognition can't tell these apart, so a reader saying "to" may be
+// transcribed as "two". Since tracking waits for the exact next word, a missed
+// homophone would stall the highlight, so each group counts as one word.
+const HOMOPHONES = [
+  ['to', 'two', 'too'], ['for', 'four', 'fore'], ['one', 'won'], ['eight', 'ate'], ['there', 'their', 'theyre'],
+  ['your', 'youre'], ['no', 'know'], ['new', 'knew'], ['right', 'write'], ['hear', 'here'],
+  ['night', 'knight'], ['bear', 'bare'], ['by', 'buy', 'bye'], ['see', 'sea'], ['son', 'sun'], ['blue', 'blew'],
+  ['red', 'read'], ['tail', 'tale'], ['wood', 'would'], ['hole', 'whole'], ['which', 'witch'], ['meet', 'meat'],
+  ['pair', 'pear'], ['piece', 'peace'], ['dear', 'deer'], ['hair', 'hare'], ['flour', 'flower'], ['eye', 'i'],
+  ['weather', 'whether'], ['road', 'rode'], ['plain', 'plane'], ['sail', 'sale'], ['week', 'weak'], ['oh', 'owe'],
+].reduce((map, group) => { for (const word of group) map.set(word, group[0]); return map; }, new Map<string, string>());
+const sound = (key: string) => HOMOPHONES.get(key) ?? key;
+
+/**
+ * Words up to four letters must match exactly (or as homophones), so "pear" never
+ * passes for "bear"; longer ones tolerate about one recognition error per four letters.
+ */
 export function wordsMatch(spoken: string, expected: string): boolean {
-  if (spoken === expected) return true;
-  if (Math.min(spoken.length, expected.length) <= 3) return false;
+  if (sound(spoken) === sound(expected)) return true;
+  if (Math.min(spoken.length, expected.length) <= 4) return false;
   return 1 - distance(spoken, expected) / Math.max(spoken.length, expected.length) >= 0.75;
 }
 
-const distinctive = (key: string) => key.length >= 4 && !STOPWORDS.has(key);
-
-/** Finds the occurrence of the phrase nearest to `near`, or -1. Returns the index after the phrase. */
-function locate(words: ScriptWord[], phrase: string[], near: number): number {
-  let best = -1;
-  for (let start = 0; start + phrase.length <= words.length; start++) {
-    if (!phrase.every((key, i) => wordsMatch(key, words[start + i].key))) continue;
-    const end = start + phrase.length;
-    if (best === -1 || Math.abs(end - near) < Math.abs(best - near)) best = end;
-  }
-  return best;
-}
-
 /**
- * Advances through the script with the recognized words, starting at `start`.
- * Filler words and misrecognitions are ignored; small skips are followed; a
- * run of misses triggers a whole-script search so rereading or jumping recovers.
+ * Advances through the script with the recognized words, starting at `start`
+ * (the index of the next expected word). The position only moves when the
+ * expected word is heard: wrong words, filler, and backtracking are ignored, so
+ * saying "three" where the script says "to" never jumps ahead to a later "three".
  */
-export function alignSpokenWords(words: ScriptWord[], spoken: string[], start: number): Alignment {
+export function alignSpokenWords(words: ScriptWord[], spoken: string[], start: number): number {
   const keys = spoken.map(normalizeWord).filter(Boolean);
   let position = Math.max(0, Math.min(start, words.length));
-  let misses = 0;
-  let relocated = false;
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    let match = -1;
-    for (let j = position; j < Math.min(words.length, position + MAX_SKIP + 1); j++) {
-      if (!wordsMatch(key, words[j].key)) continue;
-      // Skipping ahead on a common word ("the", "and") is usually a false match,
-      // so a skip needs a distinctive word or the next spoken word to agree.
-      const confirmed = j - position <= 1 || distinctive(key)
-        || (i + 1 < keys.length && j + 1 < words.length && wordsMatch(keys[i + 1], words[j + 1].key));
-      if (confirmed) { match = j; break; }
-    }
-    if (match !== -1) {
-      position = match + 1;
-      misses = 0;
-      continue;
-    }
-    // Repeating the word just read ("the... the dog") is not a miss.
-    if (position > 0 && wordsMatch(key, words[position - 1].key)) continue;
-    misses++;
-    if (misses >= RELOCATE_AFTER && i + 1 >= RELOCATE_WINDOW) {
-      const found = locate(words, keys.slice(i + 1 - RELOCATE_WINDOW, i + 1), position);
-      if (found !== -1 && found !== position) {
-        position = found;
-        relocated = true;
-      }
-      misses = 0;
+  for (let i = 0; i < keys.length && position < words.length; i++) {
+    const expected = words[position].key;
+    if (wordsMatch(keys[i], expected)) {
+      position++;
+    } else if (i + 1 < keys.length && wordsMatch(keys[i] + keys[i + 1], expected)) {
+      // The recognizer split one word in two ("ted ward" for "Tedward").
+      position++;
+      i++;
+    } else if (position + 1 < words.length && wordsMatch(keys[i], expected + words[position + 1].key)) {
+      // The recognizer joined two words into one ("everyone" for "every one").
+      position += 2;
     }
   }
-  return { position, relocated };
+  return position;
 }
 
 /** Rare words (names, long words) to pass to Deepgram as keyterms so they are recognized. */
