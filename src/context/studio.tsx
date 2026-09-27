@@ -9,6 +9,7 @@ import { useSavedStories } from '../hooks/use-saved-stories';
 import { useStoryCover } from '../hooks/use-story-cover';
 import { useInbox } from '../hooks/use-inbox';
 import { useFamily } from '../hooks/use-family';
+import * as storyTexts from '../data/story-texts';
 export type Creation = {
   id: string;
   title: string;
@@ -17,6 +18,8 @@ export type Creation = {
   color: string;
   subtitle: string;
   illustrated?: boolean;
+  /** The story's words, when it can be read aloud with Record Audio. */
+  text?: string;
 };
 export const originals: Creation[] = [{
   id: 'woodland',
@@ -25,28 +28,32 @@ export const originals: Creation[] = [{
   category: 'Stories',
   color: '#E4CDB0',
   subtitle: 'A collection of small adventures',
-  illustrated: true
+  illustrated: true,
+  text: storyTexts.woodland
 }, {
   id: 'ordinary',
   title: 'The art of\nordinary days',
   author: 'Eleanor Rose',
   category: 'Journals',
   color: '#EEDFCB',
-  subtitle: 'A journal for noticing more'
+  subtitle: 'A journal for noticing more',
+  text: storyTexts.ordinary
 }, {
   id: 'wildflowers',
   title: 'Wildflowers\n& little wonders',
   author: 'The Quiet Studio',
   category: 'Art',
   color: '#DBC4A6',
-  subtitle: 'Botanical notes from the meadow'
+  subtitle: 'Botanical notes from the meadow',
+  text: storyTexts.wildflowers
 }, {
   id: 'sunday',
   title: 'A pocketful\nof Sundays',
   author: 'Oliver Moss',
   category: 'Stories',
   color: '#E7CBBB',
-  subtitle: 'Stories for taking your time'
+  subtitle: 'Stories for taking your time',
+  text: storyTexts.sunday
 }];
 type Studio = {
   storyId: string | null;

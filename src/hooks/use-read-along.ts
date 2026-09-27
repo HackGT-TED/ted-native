@@ -11,6 +11,10 @@ const SAMPLE_RATE = 16000;
 // Audio captured while the socket opens (~100 ms buffers) is replayed, so reading can start at once.
 const MAX_QUEUED_BUFFERS = 50;
 const CLOSE_TIMEOUT_MS = 3000;
+// Speaking pace in ms per word, measured from Deepgram's word timestamps.
+const DEFAULT_PACE_MS = 400;
+const MIN_PACE_MS = 150;
+const MAX_PACE_MS = 900;
 
 function closeMessage(event: { code?: number; reason?: string }) {
   if (event.code === 1008) return 'Deepgram rejected the audio format. Please try again.';
@@ -28,17 +32,19 @@ export function useReadAlong(script: string) {
   const [current, setCurrent] = useState(-1);
   const [heard, setHeard] = useState('');
   const [error, setError] = useState('');
+  const [pace, setPace] = useState(DEFAULT_PACE_MS);
   const phaseRef = useRef<ReadAlongPhase>('idle');
   const socket = useRef<WebSocket | null>(null);
   const queue = useRef<ArrayBuffer[]>([]);
   // Final results are committed; interim results are re-aligned from the committed position
-  // each time, so Deepgram revising a guess ("bare" -> "bear") never corrupts the position.
+  // each time, so Deepgram revising a guess ("pear" -> "bear") never corrupts the position.
   const committed = useRef(0);
   const shown = useRef(0);
   const session = useRef(0);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const wordsRef = useRef(words);
   useEffect(() => { wordsRef.current = words; }, [words]);
+  const paceRef = useRef(DEFAULT_PACE_MS);
 
   const onBuffer = useCallback((buffer: AudioStreamBuffer) => {
     const ws = socket.current;
@@ -61,8 +67,18 @@ export function useReadAlong(script: string) {
   const handleResult = useCallback((result: DeepgramResult) => {
     const alternative = result.channel?.alternatives?.[0];
     if (!alternative) return;
-    const position = alignSpokenWords(wordsRef.current, alternative.words.map(w => w.word), committed.current);
+    const timed = alternative.words;
+    const position = alignSpokenWords(wordsRef.current, timed.map(w => w.word), committed.current);
     if (result.is_final) committed.current = position;
+    // Measure how fast the reader is going, so the highlighter can keep up with them.
+    if (timed.length >= 3) {
+      const span = (timed[timed.length - 1].start - timed[0].start) * 1000;
+      if (span > 300) {
+        const sample = span / (timed.length - 1);
+        paceRef.current = Math.min(MAX_PACE_MS, Math.max(MIN_PACE_MS, paceRef.current * 0.6 + sample * 0.4));
+        setPace(Math.round(paceRef.current));
+      }
+    }
     moveTo(position, result.is_final);
     if (alternative.transcript) setHeard(alternative.transcript);
   }, [moveTo]);
@@ -161,5 +177,5 @@ export function useReadAlong(script: string) {
     };
   }, [teardown]);
 
-  return { words, phase, current, heard, error, start, stop, seek };
+  return { words, phase, current, heard, error, pace, start, stop, seek };
 }

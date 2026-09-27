@@ -73,6 +73,7 @@ export function wordsMatch(spoken: string, expected: string): boolean {
  * (the index of the next expected word). The position only moves when the
  * expected word is heard: wrong words, filler, and backtracking are ignored, so
  * saying "three" where the script says "to" never jumps ahead to a later "three".
+ * The one exception is reading on past a misheard word, which is followed.
  */
 export function alignSpokenWords(words: ScriptWord[], spoken: string[], start: number): number {
   const keys = spoken.map(normalizeWord).filter(Boolean);
@@ -88,9 +89,31 @@ export function alignSpokenWords(words: ScriptWord[], spoken: string[], start: n
     } else if (position + 1 < words.length && wordsMatch(keys[i], expected + words[position + 1].key)) {
       // The recognizer joined two words into one ("everyone" for "every one").
       position += 2;
+    } else {
+      // The expected word was misheard (or misread) but the reader carried on: once the
+      // following words are heard in order, move past it instead of stalling. A single
+      // wrong word never qualifies, and backtracking says earlier words, not these.
+      const run = carriedOn(words, keys, position + 1, i);
+      if (run) {
+        position += 1 + run;
+        i += run - 1;
+      }
     }
   }
   return position;
+}
+
+const distinctive = (key: string) => key.length >= 4 && !STOPWORDS.has(key);
+
+/**
+ * How many words starting at `from` were heard in order from `keys[i]`: 2 when one
+ * of them is distinctive, 3 for common pairs like "of the", otherwise 0.
+ */
+function carriedOn(words: ScriptWord[], keys: string[], from: number, i: number): number {
+  const heard = (n: number) => from + n <= words.length && i + n <= keys.length
+    && Array.from({ length: n }, (_, k) => wordsMatch(keys[i + k], words[from + k].key)).every(Boolean);
+  if (heard(2) && (distinctive(words[from].key) || distinctive(words[from + 1].key))) return 2;
+  return heard(3) ? 3 : 0;
 }
 
 /** Rare words (names, long words) to pass to Deepgram as keyterms so they are recognized. */

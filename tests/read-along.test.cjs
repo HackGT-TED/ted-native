@@ -37,9 +37,18 @@ test('a wrong word never jumps ahead to where that word appears later', () => {
   assert.equal(read('three counted', 9), 10);
 });
 
-test('never skips a word, even a distinctive one', () => {
-  assert.equal(read('bear named', 5), 5);
+test('one word never skips ahead, even a distinctive one', () => {
+  assert.equal(read('bear', 5), 5);
   assert.equal(read('little bear named', 5), 8);
+});
+
+test('reading on past a misheard word moves past it once the next words are heard', () => {
+  // "little" was misheard, but the reader carried on with "bear named".
+  assert.equal(read('lyrical bear named', 5), 8);
+  // Common pairs like "in the" need a third word before moving on.
+  const chair = tokenizeScript('He sat in the big chair.');
+  assert.equal(alignSpokenWords(chair, ['he', 'sad', 'in', 'the'], 0), 1);
+  assert.equal(alignSpokenWords(chair, ['he', 'sad', 'in', 'the', 'big'], 0), 5);
 });
 
 test('backtracking is ignored until the expected word is heard', () => {

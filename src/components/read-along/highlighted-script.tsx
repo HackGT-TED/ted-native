@@ -8,12 +8,14 @@ const PAD_X = 4;
 const PAD_Y = 1;
 const FADE = { duration: 140 };
 const BACKWARD = { duration: 160 };
-// Deepgram reports words in bursts after they are spoken. Sweeping through a burst over
-// about the time since the last one makes the highlight glide at the reader's pace
-// instead of jumping, and it arrives roughly when the next burst does.
-const MIN_SWEEP_MS = 120;
-const MAX_WORD_MS = 350;
-const MAX_SWEEP_MS = 900;
+// Deepgram reports words in bursts, a moment after they are spoken, so the highlighter
+// is already behind. It glides through each word of a burst in half the reader's
+// measured time per word (faster for fast readers), catching up without jumping.
+const SWEEP_FRACTION = 0.5;
+const MIN_WORD_MS = 50;
+const MAX_WORD_MS = 220;
+const MIN_SWEEP_MS = 80;
+const MAX_SWEEP_MS = 450;
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -22,8 +24,9 @@ type Box = { x: number; y: number; width: number; height: number };
  * The highlighter follows a fractional word position, so a jump of several words
  * animates through each one in turn. Tapping a word seeks to it.
  */
-export function HighlightedScript({ words, current, onSeek }: {
-  words: ScriptWord[]; current: number; onSeek?: (index: number) => void;
+export function HighlightedScript({ words, current, pace = 400, onSeek }: {
+  /** The reader's speaking pace in ms per word. */
+  words: ScriptWord[]; current: number; pace?: number; onSeek?: (index: number) => void;
 }) {
   const boxes = useRef<Box[]>([]);
   const syncQueued = useRef(false);
@@ -31,7 +34,9 @@ export function HighlightedScript({ words, current, onSeek }: {
   const progress = useSharedValue(-1);
   const opacity = useSharedValue(0);
   const previous = useRef(-1);
-  const lastMove = useRef(0);
+  // Read when the highlight moves; a pace change alone shouldn't restart the glide.
+  const paceRef = useRef(pace);
+  useEffect(() => { paceRef.current = pace; }, [pace]);
   const scroll = useRef<ScrollView>(null);
   const viewport = useRef(0);
   const offset = useRef(0);
@@ -59,21 +64,19 @@ export function HighlightedScript({ words, current, onSeek }: {
   useEffect(() => {
     const from = previous.current;
     previous.current = current;
-    const now = Date.now();
     if (current < 0) {
       opacity.set(withTiming(0, FADE));
     } else if (from < 0) {
       progress.set(current);
       opacity.set(withTiming(1, FADE));
     } else if (current > from) {
-      const steps = current - from;
-      const duration = Math.min(Math.max(now - lastMove.current, MIN_SWEEP_MS), steps * MAX_WORD_MS, MAX_SWEEP_MS);
+      const perWord = Math.min(MAX_WORD_MS, Math.max(MIN_WORD_MS, paceRef.current * SWEEP_FRACTION));
+      const duration = Math.min(MAX_SWEEP_MS, Math.max(MIN_SWEEP_MS, (current - from) * perWord));
       // Starts from wherever the highlighter is, so back-to-back bursts form one continuous glide.
       progress.set(withTiming(current, { duration, easing: Easing.linear }));
     } else if (current < from) {
       progress.set(withTiming(current, BACKWARD));
     }
-    lastMove.current = now;
     keepVisible(current);
   }, [current, keepVisible, opacity, progress]);
 
