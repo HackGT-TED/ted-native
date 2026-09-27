@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { signCovers, type MarketplaceStory } from './use-marketplace-stories';
+import { signCovers, type CommunityStory } from './use-community-stories';
 
-export type InboxStory = MarketplaceStory & {
+export type InboxStory = CommunityStory & {
   shareId: string;
   senderName: string;
   sentAt: string;

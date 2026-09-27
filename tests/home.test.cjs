@@ -2,11 +2,11 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { load, harness } = require('./hook-harness.cjs');
 
-function setup({ projects = [], marketplace = [], inbox = [] } = {}) {
+function setup({ projects = [], community = [], inbox = [], loading = false } = {}) {
   const hooks = harness();
   const calls = [];
   const studio = {
-    timeline: { ready: true, projects, diskError: '' }, recorder: { phase: 'idle' }, name: 'Rose', authLoading: false,
+    timeline: { ready: true, loading, projects, diskError: '' }, recorder: { phase: 'idle' }, name: 'Rose', authLoading: false,
     stories: { items: [{ creation_session_id: 'p1', title: 'The Dragon' }] },
     openStory: (id, record) => calls.push(['open', id, record]),
     session: { user: { id: 'kid' } }, inbox: { items: inbox, unheard: inbox.filter(i => !i.listenedAt).length,
@@ -21,9 +21,10 @@ function setup({ projects = [], marketplace = [], inbox = [] } = {}) {
     '../components/shell': { Shell: 'Shell' },
     '../components/audio-story-grid': { AudioStoryGrid: 'AudioStoryGrid' },
     '../components/inbox-list': { openSentStory: (story, mark) => { mark(story.shareId); calls.push(['openSent', story.id]); } },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading', Icon: 'Icon' },
     '../context/studio': { useStudio: () => studio },
-    '../hooks/use-marketplace-stories': { useMarketplaceStories: () => ({ items: marketplace, loading: false, error: '', refresh() {} }) },
+    '../hooks/use-community-stories': { useCommunityStories: () => ({ items: community, loading, error: '', refresh() {} }) },
     '../utils/recordings': { formatRecordingDay: () => 'Today',
       newProjectId: () => '11111111-2222-4333-8444-555555555555' },
   });
@@ -68,9 +69,20 @@ test('with no recordings the section explains itself', () => {
   assert.match(setup().text(), /Your recordings will show up here/);
 });
 
-test('Explore shows four marketplace stories and opens the marketplace on Audio Stories', () => {
+test('initial loads show skeletons instead of empty states, while refreshes retain content', () => {
+  const initial = setup({ loading: true });
+  assert.match(initial.text(), /Loading recent stories/);
+  assert.match(initial.text(), /Loading stories/);
+  assert.doesNotMatch(initial.text(), /Your recordings will show up here|No stories in the community yet/);
+  const refreshing = setup({ loading: true, projects: [project('p1', 4)], community: [{ id: 'a' }] });
+  assert.ok(refreshing.byLabel('Continue The Dragon'));
+  assert.equal(refreshing.grid().stories[0].id, 'a');
+  assert.doesNotMatch(refreshing.text(), /LoadingSkeleton/);
+});
+
+test('Explore shows four community stories and opens the community on Audio Stories', () => {
   const stories = ['a', 'b', 'c', 'd', 'e'].map(id => ({ id }));
-  const h = setup({ marketplace: stories });
+  const h = setup({ community: stories });
   assert.deepEqual(Array.from(h.grid().stories, s => s.id), ['a', 'b', 'c', 'd']);
   const open = h.all.find(n => n.type === 'Button' && n.props.title === 'See more').props;
   open.onPress();

@@ -1,5 +1,6 @@
+import { LoadingSkeleton } from './loading-skeleton';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { useStudio } from '../context/studio';
 import { personName, searchPeople, type Person } from '../services/story-shares';
 import { colors, Icon } from './ui';
@@ -44,8 +45,8 @@ export function StoryRecipients({ selected, onChange, disabled = false }: {
     .filter(member => !member.is_me && !chosen.has(member.id))
     .map(({ id, username, full_name }) => ({ id, username, full_name }));
 
-  return <View className="gap-2">
-    <Text nativeID="send-to-label" className="text-[13px] text-ink">Send to family & friends</Text>
+  return <View className="gap-1.5">
+    <Text nativeID="send-to-label" className="text-[13px] leading-4 tracking-[-0.15px] text-ink">Send to family & friends</Text>
     {relatives.length ? <View className="gap-1.5">
       <View className="flex-row items-center justify-between">
         <Text className="text-[11px] text-muted">{family.family?.name}</Text>
@@ -79,9 +80,9 @@ export function StoryRecipients({ selected, onChange, disabled = false }: {
         value={query} onChangeText={type} editable={!disabled}
         placeholder="Search by name or username" placeholderTextColor={colors.muted}
         autoCapitalize="none" autoCorrect={false}
-        className="min-h-11 flex-1 text-[14px] text-ink" />
-      {searching ? <ActivityIndicator color={colors.cocoa} /> : null}
+        className="min-h-11 flex-1 text-[14px] tracking-[-0.2px] text-ink" />
     </View>
+    {searching ? <LoadingSkeleton label="Searching for people" /> : null}
     {error ? <Text accessibilityRole="alert" className="text-[12px] text-rust">{error}</Text> : null}
     {query.trim().length >= 2 && !searching && !error ? <View className="overflow-hidden rounded-[10px] border border-line">
       {matches.length ? matches.map(person => <Pressable key={person.id} accessibilityRole="button"

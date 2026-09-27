@@ -7,8 +7,8 @@ export type Story = {
   created_at: string;
   updated_at: string;
   published_at: string | null;
-  /** Published to the marketplace for everyone, not just the author. */
-  marketplace: boolean;
+  /** Published to the community for everyone, not just the author. */
+  community: boolean;
   /** Storage path of the story's cover image in the recordings bucket. */
   cover_path: string | null;
 };

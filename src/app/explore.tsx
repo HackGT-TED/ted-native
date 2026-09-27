@@ -1,12 +1,13 @@
+import { LoadingSkeleton } from '../components/loading-skeleton';
 import { useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { Shell } from "../components/shell";
 import { Body, Button, colors, Heading, Icon } from "../components/ui";
 import { WrittenStoryTile } from "../components/written-story-card";
 import { AudioStoryGrid } from "../components/audio-story-grid";
 import { useStudio } from "../context/studio";
-import { useMarketplaceStories } from "../hooks/use-marketplace-stories";
+import { useCommunityStories } from "../hooks/use-community-stories";
 import { useWrittenStories } from "../hooks/use-written-stories";
 
 const tabs = ["Written Stories", "Audio Stories"] as const;
@@ -14,11 +15,11 @@ type Tab = (typeof tabs)[number];
 
 export default function Explore() {
   const { authLoading } = useStudio();
-  // Home's "See all" opens the marketplace straight to Audio Stories (?tab=audio).
+  // Home's "See all" opens the community straight to Audio Stories (?tab=audio).
   const { tab: requested } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<Tab>(requested === "audio" ? "Audio Stories" : "Written Stories");
   const [query, setQuery] = useState("");
-  const audio = useMarketplaceStories(authLoading);
+  const audio = useCommunityStories(authLoading);
   const search = query.trim().toLowerCase();
   const written = useWrittenStories();
   const items = written.items.filter((story) =>
@@ -32,7 +33,7 @@ export default function Explore() {
       <View className="w-full max-w-[700px] self-center pt-9">
         <Heading>Explore</Heading>
         <Body className="mt-2">
-          Search our marketplace and find stories to read, as well as pre-recorded audio to share!
+          Search our community and find stories to read, as well as pre-recorded audio to share!
         </Body>
         <View accessibilityRole="tablist" className="mt-6 flex-row rounded-[12px] bg-cream p-1">
           {tabs.map((value) => (
@@ -75,7 +76,7 @@ export default function Explore() {
               <Button title="Retry" secondary onPress={() => { void written.refresh(); }} />
             </View>
           ) : written.loading && !written.items.length ? (
-            <ActivityIndicator accessibilityLabel="Loading stories" className="mt-[60px]" color={colors.cocoa} />
+            <LoadingSkeleton variant="grid" label="Loading stories" className="mt-5" />
           ) : items.length ? (
             <View className="mt-5 flex-row flex-wrap justify-between gap-y-4">
               {items.map((story) => (
@@ -92,13 +93,13 @@ export default function Explore() {
             <Text accessibilityRole="alert" className="text-center text-[13px] text-rust">{audio.error}</Text>
             <Button title="Retry" secondary onPress={() => { void audio.refresh(); }} />
           </View>
-        ) : audio.loading || authLoading ? (
-          <ActivityIndicator accessibilityLabel="Loading audio stories" className="mt-[60px]" color={colors.cocoa} />
+        ) : (audio.loading || authLoading) && !audio.items.length ? (
+          <LoadingSkeleton variant="grid" label="Loading audio stories" className="mt-5" />
         ) : audioItems.length ? (
           <AudioStoryGrid stories={audioItems} />
         ) : (
           <Body className="mt-[70px] text-center">
-            {search ? "No results. Try another search." : "No audio stories yet. Publish one to the marketplace from Create!"}
+            {search ? "No results. Try another search." : "No audio stories yet. Publish one to the community from Create!"}
           </Body>
         )}
       </View>

@@ -4,7 +4,7 @@
 
 ## Styling
 
-All screens and UI components use Tailwind utility classes through NativeWind 4. The palette and icon font are defined in `tailwind.config.js`. Metro uses `inlineRem: 16` so spacing utilities match the original numeric dimensions on native and web.
+All screens and UI components use Tailwind utility classes through NativeWind 4. The palette and heading font are defined in `tailwind.config.js`. Icons use centered SVG assets through the shared `Icon` component, avoiding platform text-baseline differences. Metro uses `inlineRem: 16` so spacing utilities match the original numeric dimensions on native and web.
 
 Use `className` for component styling and `contentContainerClassName` for scroll content. Shared typography and buttons accept `className`; use Tailwind's `!` modifier when overriding a typography default (for example, `!text-[12px]`). Keep complete class names in conditional branches so Tailwind can discover them. Style props are reserved for runtime values (animated transforms, avatar/icon dimensions, creation colors) and navigator options that do not accept classes.
 

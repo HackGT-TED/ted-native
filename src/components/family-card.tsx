@@ -1,5 +1,6 @@
+import { LoadingSkeleton } from './loading-skeleton';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, Text, TextInput, View } from 'react-native';
 import { useStudio } from '../context/studio';
 import type { FamilyMember } from '../hooks/use-family';
 import { Button, colors, Icon } from './ui';
@@ -23,7 +24,7 @@ export function FamilyCard() {
   };
 
   if (family.loading && !family.family) {
-    return <ActivityIndicator accessibilityLabel="Loading your family" className="my-6" color={colors.cocoa} />;
+    return <LoadingSkeleton variant="family" label="Loading your family" />;
   }
   if (family.error) {
     return <View className="gap-3 rounded-[20px] bg-cream p-5">
@@ -35,27 +36,27 @@ export function FamilyCard() {
   const current = family.family;
   if (!current) {
     return <View className="gap-5 rounded-[20px] bg-cream p-5">
-      <View className="gap-2">
-        <Text accessibilityRole="header" className="text-[17px] font-medium text-ink">Start a family</Text>
-        <Text className="text-[13px] leading-[19px] text-muted">Create your family, then share its code so everyone can join.</Text>
+      <View className="gap-1.5">
+        <Text accessibilityRole="header" className="text-[17px] font-medium tracking-[-0.2px] text-ink">Start a family</Text>
+        <Text className="text-[13px] leading-[18px] tracking-[-0.15px] text-muted">Create your family, then share its code so everyone can join.</Text>
         <TextInput accessibilityLabel="Family name" value={name} onChangeText={setName} maxLength={60}
           editable={!family.busy} placeholder="The Rivera family" placeholderTextColor={colors.muted}
           returnKeyType="done" onSubmitEditing={() => act(() => family.create(name))}
-          className="min-h-12 rounded-[10px] border border-line bg-paper px-4 text-[15px] text-ink" />
+          className="min-h-12 rounded-[10px] border border-line bg-paper px-4 text-[15px] tracking-[-0.2px] text-ink" />
         <Button title={family.busy ? 'Please wait…' : 'Start a family'} disabled={family.busy}
           onPress={() => act(() => family.create(name))} />
       </View>
       <View className="flex-row items-center gap-3">
         <View className="h-px flex-1 bg-line" /><Text className="text-[12px] text-muted">or</Text><View className="h-px flex-1 bg-line" />
       </View>
-      <View className="gap-2">
-        <Text accessibilityRole="header" className="text-[17px] font-medium text-ink">Join with a code</Text>
+      <View className="gap-1.5">
+        <Text accessibilityRole="header" className="text-[17px] font-medium tracking-[-0.2px] text-ink">Join with a code</Text>
         <TextInput accessibilityLabel="Family invite code" value={code}
           onChangeText={value => setCode(value.toUpperCase())} maxLength={8}
           editable={!family.busy} placeholder="ABC234" placeholderTextColor={colors.muted}
           autoCapitalize="characters" autoCorrect={false} returnKeyType="done"
           onSubmitEditing={() => act(() => family.join(code))}
-          className="min-h-12 rounded-[10px] border border-line bg-paper px-4 text-[18px] tracking-[4px] text-ink" />
+          className="min-h-12 rounded-[10px] border border-line bg-paper px-4 text-[18px] tracking-[2px] text-ink" />
         <Button title={family.busy ? 'Please wait…' : 'Join family'} secondary disabled={family.busy}
           onPress={() => act(() => family.join(code))} />
       </View>

@@ -23,7 +23,7 @@ export const originals: Creation[] = [];
 type Studio = {
   storyId: string | null;
   stories: ReturnType<typeof useStories>;
-  /** Marketplace stories this user saved to their library. */
+  /** Community stories this user saved to their library. */
   savedStories: ReturnType<typeof useSavedStories>;
   /** Stories other people sent to this user. */
   inbox: ReturnType<typeof useInbox>;

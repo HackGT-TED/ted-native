@@ -1,18 +1,19 @@
+import { LoadingSkeleton } from '../components/loading-skeleton';
 import { useCallback, useRef } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Shell } from '../components/shell';
 import { AudioStoryGrid } from '../components/audio-story-grid';
 import { openSentStory } from '../components/inbox-list';
 import { Body, Button, colors, Heading, Icon } from '../components/ui';
 import { useStudio } from '../context/studio';
-import { useMarketplaceStories } from '../hooks/use-marketplace-stories';
+import { useCommunityStories } from '../hooks/use-community-stories';
 import { formatRecordingDay, newProjectId } from '../utils/recordings';
 
 const RECENT_LIMIT = 3;
 const EXPLORE_LIMIT = 4;
 
-function openMarketplace() {
+function openCommunity() {
   router.replace({ pathname: '/explore', params: { tab: 'audio' } });
 }
 
@@ -26,10 +27,10 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
   </View>;
 }
 
-/** Home: start a recording, return to recent stories, and browse a slice of the marketplace. */
+/** Home: start a recording, return to recent stories, and browse a slice of the community. */
 export default function Home() {
   const { timeline, recorder, openStory, stories, name, authLoading, session, inbox } = useStudio();
-  const marketplace = useMarketplaceStories(authLoading);
+  const community = useCommunityStories(authLoading);
   const opening = useRef(false);
   useFocusEffect(useCallback(() => { opening.current = false; }, []));
   const unavailable = !timeline.ready || recorder.phase !== 'idle';
@@ -83,7 +84,7 @@ export default function Home() {
           className={`mt-6 flex-row items-center gap-5 rounded-[20px] bg-cream p-5 active:opacity-80 ${unavailable ? 'opacity-60' : ''}`}
         >
           <View className="h-[76px] w-[76px] items-center justify-center rounded-full bg-cocoa">
-            {!timeline.ready ? <ActivityIndicator color={colors.paper} /> : <Icon name="mic" size={36} color={colors.paper} />}
+            {!timeline.ready ? <LoadingSkeleton variant="inline" label="Preparing recorder" /> : <Icon name="mic" size={36} color={colors.paper} />}
           </View>
           <View className="flex-1">
             <Text className="text-[18px] font-medium text-ink">Tap to record</Text>
@@ -99,7 +100,7 @@ export default function Home() {
         <View className="mt-10">
           <SectionHeader title="Pick up where you left off"
             action={timeline.projects.length > RECENT_LIMIT ? 'See all' : undefined} onAction={() => router.replace('/library')} />
-          {recent.length ? recent.map((project, index) => <Pressable
+          {!recent.length && (!timeline.ready || timeline.loading || stories.loading) ? <LoadingSkeleton label="Loading recent stories" /> : recent.length ? recent.map((project, index) => <Pressable
             key={project.id ?? 'legacy'}
             accessibilityRole="button"
             accessibilityLabel={`Continue ${titleFor(project.id, index)}`}
@@ -119,19 +120,19 @@ export default function Home() {
           </View>}
         </View>
 
-        {/* Explore: a slice of the marketplace */}
+        {/* Explore: a slice of the community */}
         <View className="mt-10">
-          <SectionHeader title="Explore" action="See all" onAction={openMarketplace} />
+          <SectionHeader title="Explore" action="See all" onAction={openCommunity} />
           <Body className="-mt-1 !text-[13px]">Stories from the community, ready to play.</Body>
-          {marketplace.error ? <View className="mt-4 gap-3">
-            <Text accessibilityRole="alert" className="text-[13px] text-rust">{marketplace.error}</Text>
-            <Button title="Retry" secondary onPress={() => { void marketplace.refresh(); }} />
-          </View> : marketplace.loading || authLoading ? <ActivityIndicator accessibilityLabel="Loading stories" className="mt-8" color={colors.cocoa} />
-            : marketplace.items.length ? <AudioStoryGrid stories={marketplace.items.slice(0, EXPLORE_LIMIT)} />
+          {community.error ? <View className="mt-4 gap-3">
+            <Text accessibilityRole="alert" className="text-[13px] text-rust">{community.error}</Text>
+            <Button title="Retry" secondary onPress={() => { void community.refresh(); }} />
+          </View> : (community.loading || authLoading) && !community.items.length ? <LoadingSkeleton variant="grid" label="Loading stories" className="mt-5" />
+            : community.items.length ? <AudioStoryGrid stories={community.items.slice(0, EXPLORE_LIMIT)} />
               : <View className="mt-4 rounded-[14px] border border-dashed border-line p-5">
-                <Text className="text-[13px] text-muted">No stories in the marketplace yet. Publish one from Create to be the first!</Text>
+                <Text className="text-[13px] text-muted">No stories in the community yet. Publish one from Create to be the first!</Text>
               </View>}
-          <Button title="See more" secondary className="mt-5" onPress={openMarketplace} />
+          <Button title="See more" secondary className="mt-5" onPress={openCommunity} />
         </View>
       </View>
     </Shell>

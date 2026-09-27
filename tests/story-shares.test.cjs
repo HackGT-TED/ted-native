@@ -32,7 +32,7 @@ test('sending creates one share per person and ignores repeats', async () => {
 function inbox(rows) {
   const hooks = harness();
   const calls = [];
-  const marketplace = load('src/hooks/use-marketplace-stories.ts', { react: hooks.react, '../lib/supabase': { supabase: null } });
+  const community = load('src/hooks/use-community-stories.ts', { react: hooks.react, '../lib/supabase': { supabase: null } });
   const supabase = {
     rpc: async name => { calls.push(['rpc', name]); return { data: rows, error: null }; },
     channel(name) { calls.push(['channel', name]);
@@ -44,7 +44,7 @@ function inbox(rows) {
         is(f, v) { calls.push(['is', f, v]); return q; }, then(ok) { return Promise.resolve({ error: null }).then(ok); } };
       return q; },
   };
-  const module = load('src/hooks/use-inbox.ts', { react: hooks.react, '../lib/supabase': { supabase }, './use-marketplace-stories': marketplace,
+  const module = load('src/hooks/use-inbox.ts', { react: hooks.react, '../lib/supabase': { supabase }, './use-community-stories': community,
     'react-native': { AppState: { addEventListener: (_event, handler) => { supabase.onForeground = handler; return { remove() {} }; } } } });
   const h = { calls, supabase, render() { h.result = hooks.render(() => module.useInbox('kid', false)); return h.result; },
     async flush() { await tick(); h.render(); await tick(); h.render(); } };

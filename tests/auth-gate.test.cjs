@@ -15,6 +15,8 @@ function layout(studio) {
     'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View' },
     'react-native-gesture-handler': { GestureHandlerRootView: 'GestureHandlerRootView' },
     '../context/studio': { StudioProvider: 'StudioProvider', useStudio: () => studio },
+    '../components/app-toast': { AppToast: 'AppToast' },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { colors: {} },
   };
   // Font files are bundled assets; everything else resolves to the mocks above.
@@ -56,10 +58,10 @@ test('signed in: the whole app is reachable and the welcome screen is not', () =
   assert.equal(protectedGroups.find(group => group.screens.includes('index')).guard, true);
 });
 
-test('while the saved session loads, nothing is shown but a spinner', () => {
+test('while the saved session loads, a skeleton is shown until the session is restored', () => {
   const view = layout({ session: null, authLoading: true });
   assert.equal(typeof view.type, 'function', 'the loading view, not the stack');
-  assert.equal(view.type().props.children.type, 'ActivityIndicator');
+  assert.equal(view.type().props.children.type, 'LoadingSkeleton');
 });
 
 test('the welcome screen shows the title with a sign-in button under it', () => {
@@ -69,6 +71,8 @@ test('the welcome screen shows the title with a sign-in button under it', () => 
     'expo-router': { router: { push: route => calls.push(route) } },
     'react-native': { Text: 'Text', View: 'View' },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
+    '../components/app-toast': { AppToast: 'AppToast' },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Button: 'Button' },
   });
   const [title, button] = module.default().props.children.props.children;

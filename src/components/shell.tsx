@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from 'react';
-import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, Text, useWindowDimensions, View, type ScrollViewProps } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, Icon } from './ui';
@@ -7,14 +7,15 @@ import { useStudio } from '../context/studio';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 const links = [
-  { path: '/' as const, title: 'Home', icon: 'home' as const },
-  { path: '/create' as const, title: 'Create', icon: 'create' as const },
-  { path: '/family' as const, title: 'Family', icon: 'family' as const },
-  { path: '/explore' as const, title: 'Explore', icon: 'search' as const },
-  { path: '/library' as const, title: 'Library', icon: 'book' as const },
+  { path: '/' as const, title: 'Home', icon: 'navHome' as const },
+  { path: '/create' as const, title: 'Create', icon: 'navCreate' as const },
+  { path: '/family' as const, title: 'Family', icon: 'navFamily' as const },
+  { path: '/explore' as const, title: 'Explore', icon: 'navExplore' as const },
+  { path: '/library' as const, title: 'Library', icon: 'navLibrary' as const },
 ];
-export function Shell({ children, scroll = true, immersive = false, quiet = false, recordingOverlay }: {
+export function Shell({ children, scroll = true, immersive = false, quiet = false, recordingOverlay, refreshControl }: {
   children: ReactNode; scroll?: boolean; immersive?: boolean; quiet?: boolean; recordingOverlay?: ReactNode;
+  refreshControl?: ScrollViewProps['refreshControl'];
 }) {
   const focus = useSharedValue(0);
   useEffect(() => { focus.value = withTiming(immersive ? 1 : 0, { duration: 320 }); }, [focus, immersive]);
@@ -56,11 +57,13 @@ export function Shell({ children, scroll = true, immersive = false, quiet = fals
         <Text className="text-[23px] font-bold tracking-[-1.1px] text-ink">tedtime<Text className="text-honey">.</Text></Text>
       </Pressable>
       {!mobile && <View className="flex-row gap-6">{navigation}</View>}
-      <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account' : 'Sign in'} onPress={() => router.push(name ? '/account' : '/auth')} className="min-h-11 min-w-11 flex-row items-center justify-center gap-2">
-        <Icon name="person" size={21} />{!mobile && <Text className="text-[13px] text-ink">{name ? 'Account' : 'Sign in'}</Text>}
+      <Pressable accessibilityRole="button" accessibilityLabel={name ? 'Account' : 'Sign in'} onPress={() => router.push(name ? '/account' : '/auth')} className="min-h-11 min-w-11 items-center justify-center gap-1">
+        <Icon name="person" size={21} />
+        <Text className="text-center text-[11px] leading-[14px] text-ink">{name ? 'Account' : 'Sign in'}</Text>
       </Pressable>
     </Animated.View>
-    {scroll ? <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9">{content}</ScrollView> : content}
+    {scroll ? <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="grow pb-9"
+      alwaysBounceVertical={refreshControl ? true : undefined} refreshControl={refreshControl}>{content}</ScrollView> : content}
     {mobile && <Animated.View style={quietStyle} pointerEvents={quiet ? 'none' : 'auto'} accessibilityElementsHidden={quiet} importantForAccessibility={quiet ? 'no-hide-descendants' : 'auto'} className="flex-row border-t border-line pb-[7px] pt-2.5">{navigation}</Animated.View>}
     </Animated.View>
     {recordingOverlay && <Animated.View className="absolute inset-0 items-center justify-center" style={overlayStyle}

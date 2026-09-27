@@ -12,7 +12,7 @@ export function openSentStory(story: InboxStory, markListened: (shareId: string)
   router.push({ pathname: '/story/[id]', params: { id: story.id } });
 }
 
-/** Stories sent to the user. Tapping one opens the same player page as the marketplace. */
+/** Stories sent to the user. Tapping one opens the same player page as the community. */
 export function InboxList({ items }: { items: InboxStory[] }) {
   const { inbox } = useStudio();
   return <View className="gap-3">

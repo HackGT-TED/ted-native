@@ -73,7 +73,7 @@ export default function Create() {
           </View>
         ) : (
           <>
-            <Text className="mb-2.5 mt-6 text-[13px] text-ink">Category</Text>
+            <Text className="mb-1.5 mt-4 text-[13px] leading-4 tracking-[-0.15px] text-ink">Category</Text>
             <View className="flex-row gap-2.5">
               {["Stories", "Journals", "Art"].map((item) => (
                 <Pressable
@@ -91,7 +91,7 @@ export default function Create() {
                 </Pressable>
               ))}
             </View>
-            <Text className="mb-2.5 mt-6 text-[13px] text-ink">Title</Text>
+            <Text className="mb-1.5 mt-4 text-[13px] leading-4 tracking-[-0.15px] text-ink">Title</Text>
             <TextInput
               accessibilityLabel="Creation title"
               value={title}
@@ -99,9 +99,9 @@ export default function Create() {
               maxLength={65}
               placeholder="Give it a name"
               placeholderTextColor={colors.muted}
-              className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] text-ink"
+              className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] tracking-[-0.2px] text-ink"
             />
-            <Text className="mb-2.5 mt-6 text-[13px] text-ink">Description</Text>
+            <Text className="mb-1.5 mt-4 text-[13px] leading-4 tracking-[-0.15px] text-ink">Description</Text>
             <TextInput
               accessibilityLabel="Creation description"
               value={description}
@@ -110,10 +110,10 @@ export default function Create() {
               multiline
               placeholder="A few words about your creation"
               placeholderTextColor={colors.muted}
-              className="min-h-[130px] rounded-[10px] border border-line bg-paper px-4 py-4 text-[15px] text-ink align-top"
+              className="min-h-[130px] rounded-[10px] border border-line bg-paper px-4 py-3 text-[15px] leading-5 tracking-[-0.2px] text-ink align-top"
             />
             {error ? (
-              <Text accessibilityRole="alert" className="my-3 text-[13px] leading-5 text-rust">
+              <Text accessibilityRole="alert" className="my-3 text-[13px] leading-[18px] tracking-[-0.15px] text-rust">
                 {error}
               </Text>
             ) : null}
@@ -127,7 +127,7 @@ export default function Create() {
               }
               disabled={authLoading}
               onPress={publish}
-              className="mt-7"
+              className="mt-5"
             />
             <Body className="mt-4 text-center !text-[11px]">
               Shared creations are available for this demo session.

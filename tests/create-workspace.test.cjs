@@ -28,6 +28,7 @@ function setup(options = {}) {
     '../components/story-cover-picker': { StoryCoverPicker: 'StoryCoverPicker' },
     '../components/story-actions': { StoryActions: 'StoryActions' },
     '../components/shell': { Shell: 'Shell' },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Body: 'Body', Button: 'Button', Heading: 'Heading', Icon: 'Icon', colors: {} },
     '../components/recording/recording-timeline-item': { RecordingTimelineItem: 'TimelineItem' },
     '../context/studio': { useStudio: () => studio },
@@ -102,7 +103,7 @@ test('opening Create with no story open starts a new one', () => {
   assert.equal(h.calls.length, 1);
   assert.equal(h.calls[0][0], 'openStory');
   assert.match(h.calls[0][1], /^[0-9a-f-]{36}$/);
-  assert.equal(h.tree.type, 'Shell', 'shows a spinner while the new story opens');
+  assert.equal(h.tree.type, 'Shell', 'shows a skeleton while the new story opens');
 });
 
 test('welcome starts one hands-free take and tapping stop saves it once', () => {
