@@ -155,14 +155,16 @@ export function StoryActions({ disabled }: { disabled: boolean }) {
               : "Published story"}
         </Text>
       )}
-      <View className="min-h-11 flex-row items-center justify-center gap-3">
+      <View className="min-h-11 flex-row items-center justify-center self-center gap-3">
         <Text
           nativeID="community-switch-label"
-          className="text-center text-[13px] text-ink"
+          className="shrink text-center text-[13px] font-bold leading-5 text-ink"
+          style={{ includeFontPadding: false, textAlignVertical: "center" }}
         >
           Make Public
         </Text>
         <Switch
+          style={{ alignSelf: "center" }}
           accessibilityLabel="Publish to Community for all to see!"
           accessibilityLabelledBy="community-switch-label"
           accessibilityHint="Takes effect the next time you tap Publish."

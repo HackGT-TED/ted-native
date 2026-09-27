@@ -4,7 +4,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { colors, Icon } from '../ui';
 import type { RecordingSegment } from '../../types/recording';
-import { formatDuration, formatRecordingTime } from '../../utils/recordings';
+import { formatDuration, formatRecordingDay, formatRecordingTime } from '../../utils/recordings';
 
 type Props = {
   recording: RecordingSegment;
@@ -29,13 +29,24 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
   const [mode, setMode] = useState<'view' | 'rename' | 'delete' | 'move'>('view');
   const [name, setName] = useState('');
   const time = formatRecordingTime(recording.createdAt);
+  const highlighted = playing || loading || isDragging;
   const save = () => {
     if (disabled || !name.trim()) return;
     onRename(recording.id, name.trim());
     setMode('view');
   };
-  return <Animated.View entering={FadeInDown.duration(300).reduceMotion(ReduceMotion.System)} className="ml-2 border-l border-line pb-5 pl-6">
-    <View className="absolute -left-[5px] top-6 h-[9px] w-[9px] rounded-full bg-honey" />
+  return <Animated.View entering={FadeInDown.duration(300).reduceMotion(ReduceMotion.System)} className="flex-row gap-3">
+    <View className="w-8 shrink-0 items-center" pointerEvents="none">
+      {position > 1 && <View className="absolute top-0 h-10 w-px bg-line" />}
+      {position < total && <View className="absolute bottom-0 top-10 w-px bg-line" />}
+      <View accessible accessibilityRole="text"
+        accessibilityLabel={`Chapter ${position} of ${total}${playing ? ', playing' : loading ? ', loading' : ''}`}
+        className={`mt-6 min-h-8 w-8 items-center justify-center rounded-full border py-1 ${highlighted ? 'border-cocoa bg-cocoa' : 'border-line bg-paper'}`}>
+        <Text className={`text-[12px] font-semibold ${highlighted ? 'text-paper' : 'text-cocoa'}`}
+          style={{ fontVariant: ['tabular-nums'] }}>{position}</Text>
+      </View>
+    </View>
+    <View className="min-w-0 flex-1 pb-5">
     <View className={`rounded-[20px] border bg-cream px-4 py-4 ${isDragging ? 'border-cocoa' : 'border-line'}`}>
       {mode === 'rename' ? <View className="mb-3 gap-2">
         <Text className="text-[12px] text-muted">Segment name</Text>
@@ -68,7 +79,7 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
           </Pressable>
         </View>
         <Text className="mt-1 text-[11px] text-muted" style={{ fontVariant: ['tabular-nums'] }}>
-          {time} · {formatDuration(recording.durationMs)}
+          {formatRecordingDay(recording.createdAt)} · {time} · {formatDuration(recording.durationMs)}
         </Text>
       </View>}
       {mode === 'move' && <View className="mb-3 flex-row flex-wrap justify-end gap-1">
@@ -133,6 +144,7 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
         </Pressable>}
       </View>
       {(recording.error || recording.changeError || playbackError) && <Text accessibilityRole="alert" className="mt-2 text-[12px] leading-[18px] text-rust">{playbackError || recording.changeError || recording.error}</Text>}
+    </View>
     </View>
   </Animated.View>;
 });

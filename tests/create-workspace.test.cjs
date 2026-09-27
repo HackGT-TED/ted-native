@@ -24,7 +24,7 @@ function setup(options = {}) {
       useAnimatedStyle: fn => fn(), withTiming: value => value },
     '../components/recording/draggable-recording-list': { DraggableRecordingList: 'DraggableRecordingList' },
     '../hooks/use-segment-drag': { useSegmentDrag: segments => ({ data: segments, dragging: false, generation: 0 }) },
-    '../components/story-name-form': { StoryNameForm: 'StoryNameForm' },
+    '../components/story-title': { StoryTitle: 'StoryTitle' },
     '../components/story-cover-picker': { StoryCoverPicker: 'StoryCoverPicker' },
     '../components/story-actions': { StoryActions: 'StoryActions' },
     '../components/shell': { Shell: 'Shell' },
