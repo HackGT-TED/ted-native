@@ -100,7 +100,8 @@ function shell(unheard) {
 test('the bottom bar has Family in the middle and no Bear tab', () => {
   const { tabs } = shell(0);
   const titles = tabs.map(tab => nodes(tab).find(n => n.type === 'Text').props.children);
-  assert.deepEqual(titles, ['Home', 'Create', 'Family', 'Explore', 'Library']);
+  // 'Read' is the temporary read-along test tab; remove it here when the tab goes.
+  assert.deepEqual(titles, ['Home', 'Create', 'Family', 'Explore', 'Library', 'Read']);
 });
 
 test('Family shows a red dot while stories are waiting, and Account opens its page', () => {
