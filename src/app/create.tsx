@@ -14,16 +14,14 @@ import { Body, Button, colors, Heading, Icon } from "../components/ui";
 import { RecordingTimelineItem } from "../components/recording/recording-timeline-item";
 import { DraggableRecordingList } from "../components/recording/draggable-recording-list";
 import { useSegmentDrag } from "../hooks/use-segment-drag";
-import { StoryNameForm } from "../components/story-name-form";
+import { StoryTitle } from "../components/story-title";
 import { StoryCoverPicker } from "../components/story-cover-picker";
 import { StoryActions } from "../components/story-actions";
 import { useStudio } from "../context/studio";
 import { useTimelinePlayback } from "../hooks/use-timeline-playback";
 import {
   formatDuration,
-  formatRecordingDay,
   newProjectId,
-  recordingDayKey,
 } from "../utils/recordings";
 import Animated, {
   useAnimatedStyle,
@@ -56,6 +54,7 @@ function StoryWorkspace() {
   const {
     timeline,
     session,
+    storyId,
     recorder,
     draft,
     autoRecord,
@@ -220,14 +219,9 @@ function StoryWorkspace() {
             <View className="mb-7">
               <Heading>Create</Heading>
               <StoryCoverPicker disabled={phase !== "idle" || stories.saving} />
-              <StoryNameForm disabled={phase !== "idle" || stories.saving} />
+              <StoryTitle key={`${session?.user.id ?? "guest"}:${storyId ?? "legacy"}`}
+                disabled={phase !== "idle" || stories.saving || dragState.dragging} />
               <StoryActions disabled={phase !== "idle" || dragState.dragging} />
-
-              {timeline.segments.length > 1 && (
-                <Body className="mt-1 !text-[11px]">
-                  Hold the handle on a moment to rearrange your story.
-                </Body>
-              )}
               {timeline.error && (
                 <View className="mt-4 gap-2">
                   <Text
@@ -317,58 +311,47 @@ function StoryWorkspace() {
                 ? audio.durationMs
                 : item.durationMs;
             return (
-              <View>
-                {(index === 0 ||
-                  recordingDayKey(item.createdAt) !==
-                    recordingDayKey(
-                      dragState.data[index - 1]?.createdAt ?? item.createdAt,
-                    )) && (
-                  <Text className="mb-3 mt-2 text-[11px] text-muted">
-                    {formatRecordingDay(item.createdAt)}
-                  </Text>
-                )}
-                <RecordingTimelineItem
-                  recording={item}
-                  disabled={
-                    recorder.phase !== "idle" ||
-                    dragState.dragging ||
-                    stories.saving
-                  }
-                  playing={active && audio.playing}
-                  loading={active && audio.loading}
-                  progress={
-                    active
-                      ? Math.min(1, Math.max(0, audio.positionMs / duration))
-                      : 0
-                  }
-                  playbackError={active ? audio.error : undefined}
-                  onPlay={play}
-                  onRetry={timeline.retry}
-                  onRename={timeline.rename}
-                  onDelete={deleteSegment}
-                  drag={drag}
-                  isDragging={isActive}
-                  position={index + 1}
-                  total={dragState.data.length}
-                  onMoveEarlier={() => {
-                    if (index > 0)
-                      timeline.move(item.id, dragState.data[index - 1].id);
-                  }}
-                  onMoveLater={() => {
-                    if (index + 1 < dragState.data.length)
-                      timeline.move(
-                        item.id,
-                        dragState.data[index + 2]?.id ?? null,
-                      );
-                  }}
-                />
-              </View>
+              <RecordingTimelineItem
+                recording={item}
+                disabled={
+                  recorder.phase !== "idle" ||
+                  dragState.dragging ||
+                  stories.saving
+                }
+                playing={active && audio.playing}
+                loading={active && audio.loading}
+                progress={
+                  active
+                    ? Math.min(1, Math.max(0, audio.positionMs / duration))
+                    : 0
+                }
+                playbackError={active ? audio.error : undefined}
+                onPlay={play}
+                onRetry={timeline.retry}
+                onRename={timeline.rename}
+                onDelete={deleteSegment}
+                drag={drag}
+                isDragging={isActive}
+                position={index + 1}
+                total={dragState.data.length}
+                onMoveEarlier={() => {
+                  if (index > 0)
+                    timeline.move(item.id, dragState.data[index - 1].id);
+                }}
+                onMoveLater={() => {
+                  if (index + 1 < dragState.data.length)
+                    timeline.move(
+                      item.id,
+                      dragState.data[index + 2]?.id ?? null,
+                    );
+                }}
+              />
             );
           }}
           ListFooterComponent={
             <View>
               {timeline.segments.length > 0 && (
-                <Text className="mb-3 ml-8 text-[12px] text-muted">
+                <Text className="mb-3 text-[12px] text-muted">
                   {timeline.segments.length}{" "}
                   {timeline.segments.length === 1 ? "moment" : "moments"} ·{" "}
                   {formatDuration(
@@ -447,9 +430,9 @@ function StoryWorkspace() {
               {capturing
                 ? "Tap stop to add to your story"
                 : finalizing
-                  ? "Finding its place in your timeline"
+                  ? "Adding it to your story"
                   : !ready
-                    ? "Opening your timeline…"
+                    ? "Opening your moments…"
                     : "Each recording adds a new moment."}
             </Text>
           </View>
