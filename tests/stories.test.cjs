@@ -91,16 +91,21 @@ test('rows map to the app story shape, including the legacy draft and published 
   assert.equal(published.creation_session_id, 'story-2');
   assert.equal(published.status, 'published');
   assert.equal(published.updated_at, '2026-09-26T00:00:00Z');
-  assert.equal(published.marketplace, true);
-  assert.equal(legacy.marketplace, false);
+  assert.equal(published.community, true);
+  assert.equal(legacy.community, false);
 });
 
-test('Publish sends the marketplace choice; Save never does', async () => {
-  const h = setup();
-  await h.result.save('story-1', 'My story', true, ['moment-1'], { marketplace: true }); await h.flush();
+test('Publish sends the community choice; Save never does', async () => {
+  const h = setup({ save: async args => ({ data: { ...row('alice'), marketplace: args.p_marketplace ?? true } }) });
+  await h.result.save('story-1', 'My story', true, ['moment-1'], { community: true }); await h.flush();
   assert.equal(h.calls.at(-1).args.p_marketplace, true);
-  await h.result.save('story-1', 'My story', false, ['moment-1'], { marketplace: true }); await h.flush();
+  assert.equal(h.result.items[0].community, true);
+  await h.result.save('story-1', 'My story', true, ['moment-1'], { community: false }); await h.flush();
+  assert.equal(h.calls.at(-1).args.p_marketplace, false);
+  assert.equal(h.result.items[0].community, false);
+  await h.result.save('story-1', 'My story', false, ['moment-1'], { community: true }); await h.flush();
   assert.equal('p_marketplace' in h.calls.at(-1).args, false);
+  assert.equal(h.result.items[0].community, true);
 });
 
 test('a cover change is sent only when there is one', async () => {

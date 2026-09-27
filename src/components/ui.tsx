@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 import { Pressable, Text } from "react-native";
+import { Image } from "expo-image";
+import { iconAssets } from "./icon-assets";
 
 export const colors = {
   paper: "#FBF6EE",
@@ -11,49 +13,30 @@ export const colors = {
   honey: "#B88D5B",
   rust: "#A14E3B",
 };
-const glyphs = {
-  home: "\ue88a",
-  create: "\ue3c9",
-  arrow: "\ue5c8",
-  back: "\ue5c4",
-  close: "\ue5cd",
-  person: "\ue7fd",
-  book: "\ue865",
-  heart: "\ue87e",
-  search: "\ue8b6",
-  check: "\ue5ca",
-  mic: "\ue029",
-  play: "\ue037",
-  pause: "\ue034",
-  trash: "\ue872",
-  stop: "\ue047",
-  drag: "\ue25d",
-  replay10: "\ue059",
-  forward10: "\ue056",
-  image: "\ue3f4",
-  bear: "\ue91d",
-  bluetooth: "\ue1a7",
-  family: "\uf1a2",
-};
 export function Icon({
   name,
   size = 22,
   color = colors.ink,
 }: {
-  name: keyof typeof glyphs;
+  name: keyof typeof iconAssets;
   size?: number;
   color?: string;
 }) {
   return (
-    <Text
+    <Image
+      source={iconAssets[name]}
       accessible={false}
-      className="font-icons"
-      style={{ fontSize: size, color, lineHeight: size + 2 }}
-    >
-      {glyphs[name]}
-    </Text>
+      pointerEvents="none"
+      contentFit="contain"
+      contentPosition="center"
+      tintColor={color}
+      transition={0}
+      cachePolicy="memory-disk"
+      style={{ width: size, height: size, flexShrink: 0 }}
+    />
   );
 }
+
 type TypographyProps = { children: ReactNode; className?: string };
 
 export function Label({ children, className = "" }: TypographyProps) {
@@ -92,7 +75,7 @@ export function Button({
   title: string;
   onPress: () => void;
   secondary?: boolean;
-  icon?: keyof typeof glyphs;
+  icon?: keyof typeof iconAssets;
   disabled?: boolean;
   className?: string;
 }) {

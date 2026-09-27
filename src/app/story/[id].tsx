@@ -1,12 +1,13 @@
+import { LoadingSkeleton } from '../../components/loading-skeleton';
 import { useState } from 'react';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { Shell } from '../../components/shell';
 import { Body, Button, colors, Heading, Icon } from '../../components/ui';
 import { formatPublished, tint } from '../../components/audio-story-tile';
 import { useStudio } from '../../context/studio';
-import { useMarketplaceStory } from '../../hooks/use-marketplace-stories';
+import { useCommunityStory } from '../../hooks/use-community-stories';
 import { useStoryPlayer } from '../../hooks/use-story-player';
 
 const SKIP_MS = 10_000;
@@ -25,7 +26,7 @@ function goBack() {
 export default function StoryPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, authLoading, savedStories, inbox } = useStudio();
-  const { story, loading, error, refresh } = useMarketplaceStory(id, authLoading);
+  const { story, loading, error, refresh } = useCommunityStory(id, authLoading);
   const player = useStoryPlayer();
   const [barWidth, setBarWidth] = useState(0);
   const [saveError, setSaveError] = useState('');
@@ -40,17 +41,17 @@ export default function StoryPlayer() {
     <View className="w-[72px]" />
   </View>;
 
-  if (loading || error || !story) {
+  if (!story) {
     return <Shell><View className="w-full max-w-[500px] self-center pt-3">
       {header}
-      {loading ? <ActivityIndicator accessibilityLabel="Loading story" className="mt-[80px]" color={colors.cocoa} />
+      {loading ? <LoadingSkeleton variant="player" label="Loading story" className="mt-4" />
         : error ? <View className="mt-[60px] items-center gap-4">
           <Text accessibilityRole="alert" className="text-center text-[13px] text-rust">{error}</Text>
           <Button title="Retry" secondary onPress={() => { void refresh(); }} />
         </View>
         : <View className="mt-[60px] items-center gap-2">
           <Heading className="text-center">Story not found</Heading>
-          <Body className="text-center">It may have been removed from the marketplace.</Body>
+          <Body className="text-center">It may have been removed from the community.</Body>
         </View>}
     </View></Shell>;
   }
@@ -148,7 +149,7 @@ export default function StoryPlayer() {
           void player.toggle(story);
         }}
         className="h-20 w-20 items-center justify-center rounded-full bg-cocoa active:opacity-80">
-        {busy ? <ActivityIndicator color={colors.paper} />
+        {busy ? <LoadingSkeleton variant="inline" label="Loading audio" />
           : <Icon name={playing ? 'pause' : 'play'} size={44} color={colors.paper} />}
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Forward 10 seconds" disabled={!active}

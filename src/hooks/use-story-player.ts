@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { useIsFocused } from 'expo-router';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { supabase } from '../lib/supabase';
-import type { MarketplaceStory } from './use-marketplace-stories';
+import type { CommunityStory } from './use-community-stories';
 
 /** One player per screen: playing another story switches to it. */
 export function useStoryPlayer() {
@@ -38,7 +38,7 @@ export function useStoryPlayer() {
     return () => subscription.remove();
   }, [player]);
 
-  const toggle = useCallback(async (story: MarketplaceStory) => {
+  const toggle = useCallback(async (story: CommunityStory) => {
     if (activeId === story.id && !loading) {
       if (player.playing) { player.pause(); return; }
       if (finished.current) { await player.seekTo(0); finished.current = false; }

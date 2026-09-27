@@ -1,7 +1,7 @@
+import { LoadingSkeleton } from "../components/loading-skeleton";
 import { useCallback, useEffect, useRef } from "react";
 import { router, useFocusEffect } from "expo-router";
 import {
-  ActivityIndicator,
   Keyboard,
   Linking,
   Platform,
@@ -39,15 +39,29 @@ export default function Create() {
   useEffect(() => {
     if (!storyOpen) openStory(newProjectId());
   }, [openStory, storyOpen]);
-  return storyOpen ? <StoryWorkspace /> : (
+  return storyOpen ? (
+    <StoryWorkspace />
+  ) : (
     <Shell scroll={false}>
-      <ActivityIndicator accessibilityLabel="Opening a new story" className="mt-[60px]" color={colors.cocoa} />
+      <LoadingSkeleton
+        variant="workspace"
+        label="Opening a new story"
+        className="mt-6 w-full max-w-[480px] self-center"
+      />
     </Shell>
   );
 }
 
 function StoryWorkspace() {
-  const { timeline, session, recorder, draft, autoRecord, consumeAutoRecord, stories } = useStudio();
+  const {
+    timeline,
+    session,
+    recorder,
+    draft,
+    autoRecord,
+    consumeAutoRecord,
+    stories,
+  } = useStudio();
   const audio = useTimelinePlayback();
   const { refresh, ready } = timeline;
   const { start, finish, phase, duration, error, permissionBlocked } = recorder;
@@ -63,30 +77,71 @@ function StoryWorkspace() {
   }, [capturing, fade]);
   const timelineStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
   const { stop } = audio;
-  const dragState = useSegmentDrag(timeline.segments, session?.user.id ?? null,
-    ready && phase === "idle" && !stories.saving, timeline.move, stop);
-  const unavailable = !ready || finalizing || phase === "error" || dragState.dragging || stories.saving;
+  const dragState = useSegmentDrag(
+    timeline.segments,
+    session?.user.id ?? null,
+    ready && phase === "idle" && !stories.saving,
+    timeline.move,
+    stop,
+  );
+  const unavailable =
+    !ready ||
+    finalizing ||
+    phase === "error" ||
+    dragState.dragging ||
+    stories.saving;
   const begin = useCallback(() => {
-    if (holding.current || dragState.dragging || !ready || phase !== "idle" || stories.saving) return;
+    if (
+      holding.current ||
+      dragState.dragging ||
+      !ready ||
+      phase !== "idle" ||
+      stories.saving
+    )
+      return;
     holding.current = true;
     scrollToLatest.current = true;
     previousLastId.current = timeline.segments.at(-1)?.id;
     Keyboard.dismiss();
     stop();
     void start();
-  }, [dragState.dragging, phase, ready, start, stop, stories.saving, timeline.segments]);
+  }, [
+    dragState.dragging,
+    phase,
+    ready,
+    start,
+    stop,
+    stories.saving,
+    timeline.segments,
+  ]);
   const release = useCallback(() => {
     if (!holding.current) return;
     holding.current = false;
     void finish();
   }, [finish]);
   useEffect(() => {
-    if (holding.current || !autoRecord || !ready || draft.loading || phase !== "idle" || stories.saving) return;
+    if (
+      holding.current ||
+      !autoRecord ||
+      !ready ||
+      draft.loading ||
+      phase !== "idle" ||
+      stories.saving
+    )
+      return;
     consumeAutoRecord();
     holding.current = true;
     scrollToLatest.current = true;
     void start();
-  }, [autoRecord, consumeAutoRecord, draft.loading, phase, ready, start, stories.saving]);
+  }, [
+    autoRecord,
+    consumeAutoRecord,
+    draft.loading,
+    phase,
+    ready,
+    start,
+    stories.saving,
+  ]);
   // Navigation, OS interruptions, and touch cancellation all finalize the take.
   useFocusEffect(useCallback(() => release, [release]));
   useEffect(() => {
@@ -108,10 +163,13 @@ function StoryWorkspace() {
   );
 
   const { remove } = timeline;
-  const deleteSegment = useCallback((id: string) => {
-    if (audio.activeId === id) stop();
-    remove(id);
-  }, [audio.activeId, remove, stop]);
+  const deleteSegment = useCallback(
+    (id: string) => {
+      if (audio.activeId === id) stop();
+      remove(id);
+    },
+    [audio.activeId, remove, stop],
+  );
 
   return (
     <Shell scroll={false} quiet={capturing}>
@@ -146,23 +204,29 @@ function StoryWorkspace() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          refreshing={!dragState.dragging && timeline.loading}
-          onRefresh={dragState.dragging ? undefined : () => {
-            void refresh();
-          }}
+          refreshing={
+            !dragState.dragging &&
+            timeline.loading &&
+            timeline.segments.length > 0
+          }
+          onRefresh={
+            dragState.dragging
+              ? undefined
+              : () => {
+                  void refresh();
+                }
+          }
           ListHeaderComponent={
             <View className="mb-7">
               <Heading>Create</Heading>
               <StoryCoverPicker disabled={phase !== "idle" || stories.saving} />
               <StoryNameForm disabled={phase !== "idle" || stories.saving} />
               <StoryActions disabled={phase !== "idle" || dragState.dragging} />
-              
-              <Body className="mt-1 !text-[12px]">
-                Tap to record. Tap stop to add it to your story.
-              </Body>
-              {timeline.segments.length > 1 && <Body className="mt-1 !text-[11px]">Hold the handle on a moment to rearrange your story.</Body>}
-              {timeline.loading && (
-                <ActivityIndicator className="mt-4" color={colors.cocoa} />
+
+              {timeline.segments.length > 1 && (
+                <Body className="mt-1 !text-[11px]">
+                  Hold the handle on a moment to rearrange your story.
+                </Body>
               )}
               {timeline.error && (
                 <View className="mt-4 gap-2">
@@ -183,10 +247,18 @@ function StoryWorkspace() {
               )}
               {timeline.deletionSyncError && (
                 <View className="mt-4 gap-2">
-                  <Text accessibilityRole="alert" className="text-[13px] text-rust">
-                    A segment was removed here, but the deletion could not sync yet.
+                  <Text
+                    accessibilityRole="alert"
+                    className="text-[13px] text-rust"
+                  >
+                    A segment was removed here, but the deletion could not sync
+                    yet.
                   </Text>
-                  <Button title="Retry syncing deletions" secondary onPress={timeline.retryDeletions} />
+                  <Button
+                    title="Retry syncing deletions"
+                    secondary
+                    onPress={timeline.retryDeletions}
+                  />
                 </View>
               )}
               {timeline.diskError && (
@@ -223,7 +295,9 @@ function StoryWorkspace() {
             </View>
           }
           ListEmptyComponent={
-            !timeline.loading ? (
+            !ready || timeline.loading ? (
+              <LoadingSkeleton label="Loading your moments" />
+            ) : (
               <View className="rounded-[20px] border border-line bg-cream px-6 py-9">
                 <Text className="text-[19px] font-medium text-ink">
                   A story starts with a moment.
@@ -233,7 +307,7 @@ function StoryWorkspace() {
                   microphone below to add your first moment.
                 </Body>
               </View>
-            ) : null
+            )
           }
           renderItem={({ item, getIndex, drag, isActive }) => {
             const index = getIndex() ?? 0;
@@ -255,7 +329,11 @@ function StoryWorkspace() {
                 )}
                 <RecordingTimelineItem
                   recording={item}
-                  disabled={recorder.phase !== "idle" || dragState.dragging || stories.saving}
+                  disabled={
+                    recorder.phase !== "idle" ||
+                    dragState.dragging ||
+                    stories.saving
+                  }
                   playing={active && audio.playing}
                   loading={active && audio.loading}
                   progress={
@@ -272,8 +350,17 @@ function StoryWorkspace() {
                   isDragging={isActive}
                   position={index + 1}
                   total={dragState.data.length}
-                  onMoveEarlier={() => { if (index > 0) timeline.move(item.id, dragState.data[index - 1].id); }}
-                  onMoveLater={() => { if (index + 1 < dragState.data.length) timeline.move(item.id, dragState.data[index + 2]?.id ?? null); }}
+                  onMoveEarlier={() => {
+                    if (index > 0)
+                      timeline.move(item.id, dragState.data[index - 1].id);
+                  }}
+                  onMoveLater={() => {
+                    if (index + 1 < dragState.data.length)
+                      timeline.move(
+                        item.id,
+                        dragState.data[index + 2]?.id ?? null,
+                      );
+                  }}
                 />
               </View>
             );
@@ -293,15 +380,6 @@ function StoryWorkspace() {
                   in your draft
                 </Text>
               )}
-              <Pressable
-                accessibilityRole="link"
-                onPress={() => router.push("/share")}
-                className="min-h-11 justify-center self-center px-3"
-              >
-                <Text className="text-[12px] text-muted">
-                  Share a written creation
-                </Text>
-              </Pressable>
             </View>
           }
         />
@@ -311,17 +389,30 @@ function StoryWorkspace() {
           {/* Tap to start, tap again to stop. Keep it enabled while recording. */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={capturing ? "Stop recording" : "Record a story moment"}
-            accessibilityHint={capturing ? "Tap to add this recording to your story." : "Tap to start recording. Tap again when you are finished."}
+            accessibilityLabel={
+              capturing ? "Stop recording" : "Record a story moment"
+            }
+            accessibilityHint={
+              capturing
+                ? "Tap to add this recording to your story."
+                : "Tap to start recording. Tap again when you are finished."
+            }
             accessibilityState={{ disabled: unavailable, busy: finalizing }}
             disabled={unavailable}
-            onPress={() => { if (capturing) release(); else begin(); }}
+            onPress={() => {
+              if (capturing) release();
+              else begin();
+            }}
             className={`h-24 w-24 items-center justify-center rounded-full border-[6px] ${capturing ? "border-line bg-rust" : "border-cream bg-cocoa"} ${unavailable ? "opacity-50" : ""}`}
           >
             {finalizing ? (
-              <ActivityIndicator color={colors.paper} />
+              <LoadingSkeleton variant="inline" label="Saving your recording" />
             ) : (
-              <Icon name={capturing ? "stop" : "mic"} size={34} color={colors.paper} />
+              <Icon
+                name={capturing ? "stop" : "mic"}
+                size={34}
+                color={colors.paper}
+              />
             )}
           </Pressable>
           <View className="min-h-[100px] flex-1 justify-center">

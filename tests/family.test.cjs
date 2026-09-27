@@ -66,6 +66,7 @@ function card(family, { share } = {}) {
     react: hooks.react, 'react/jsx-runtime': jsx,
     'react-native': { ActivityIndicator: 'ActivityIndicator', Pressable: 'Pressable', Text: 'Text', TextInput: 'TextInput', View: 'View',
       Share: { share: async content => { shared.push(content); if (share) await share(); } } },
+    './loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     './ui': { Button: 'Button', colors: {}, Icon: 'Icon' },
     '../context/studio': { useStudio: () => ({ family }) },
   });
@@ -122,6 +123,7 @@ test('Send to suggests family members and can add everyone at once', () => {
     '../context/studio': { useStudio: () => ({ family: { family: { ...theRiveras, members: [...theRiveras.members,
       { id: 'pa', username: null, full_name: 'Grandpa', is_me: false }] } } }) },
     '../services/story-shares': { personName: p => p.full_name || p.username, searchPeople: async () => [] },
+    './loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     './ui': { colors: {}, Icon: 'Icon' },
   });
   const all = () => nodes(hooks.render(() => module.StoryRecipients({ selected: [], onChange: people => changes.push(people) })));

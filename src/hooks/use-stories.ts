@@ -14,8 +14,8 @@ type StoryRow = {
 export type SaveExtras = {
   /** Publish only: the backend's mixed MP3, description, and tags. */
   audio?: PublishedAudio;
-  /** Publish only: show the story in the marketplace. */
-  marketplace?: boolean;
+  /** Publish only: show the story in the community. */
+  community?: boolean;
   /** A cover path to set, '' to remove the cover, or undefined to leave it. */
   coverPath?: string;
 };
@@ -31,7 +31,7 @@ function toStory(row: StoryRow): Story {
     created_at: row.created_at,
     updated_at: row.published_at ?? row.created_at,
     published_at: row.published_at,
-    marketplace: Boolean(row.marketplace_visible),
+    community: Boolean(row.marketplace_visible),
     cover_path: row.cover_image_path ?? null,
   };
 }
@@ -79,7 +79,7 @@ export function useStories(userId: string | null, authLoading: boolean) {
   }, [refresh]);
 
   const save = useCallback(async (projectId: string | null, title: string, publish: boolean, segmentIds: string[],
-    { audio, marketplace, coverPath }: SaveExtras = {}) => {
+    { audio, community, coverPath }: SaveExtras = {}) => {
     if (!supabase || !userId || authLoading) throw new Error('Sign in to save your story to your account.');
     if (savingOwner.current) throw new Error('A story save is already in progress.');
     savingOwner.current = userId;
@@ -95,12 +95,15 @@ export function useStories(userId: string | null, authLoading: boolean) {
           p_description: audio.description,
           p_category_tags: audio.categoryTags,
         } : {}),
-        ...(publish && marketplace !== undefined ? { p_marketplace: marketplace } : {}),
+        ...(publish && community !== undefined ? { p_marketplace: community } : {}),
         ...(coverPath !== undefined ? { p_cover_image_path: coverPath } : {}),
       });
       if (error) throw new Error('Your story could not be saved to your account. Please retry.');
-      const story = data as Story;
-      if (!story || story.user_id !== userId) throw new Error('Your story save could not be confirmed. Please retry.');
+      // The deployed RPC retains its original field name; normalize it for the app.
+      const saved = data as (Omit<Story, 'community'> & { marketplace?: boolean }) | null;
+      if (!saved || saved.user_id !== userId) throw new Error('Your story save could not be confirmed. Please retry.');
+      const { marketplace, ...details } = saved;
+      const story: Story = { ...details, community: Boolean(marketplace) };
       if (activeOwner.current === userId) {
         // A list request started before this save must not replace its result.
         generation.current++;
