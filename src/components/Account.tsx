@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { supabase } from "../lib/supabase";
 import { Button } from "./ui";
+import { LoadingSkeleton } from './loading-skeleton';
 
 export default function Account({
   userId,
@@ -116,23 +117,24 @@ export default function Account({
 
   return (
     <View>
-      <Text className="mb-2.5 mt-6 text-[13px] text-ink">Email</Text>
+      {loading ? <LoadingSkeleton variant="form" label="Loading profile" className="mt-4" /> : <>
+      <Text className="mb-1.5 mt-4 text-[13px] leading-4 tracking-[-0.15px] text-ink">Email</Text>
       <TextInput
         accessibilityLabel="Account email"
         value={email ?? ""}
         editable={false}
-        className="min-h-[52px] rounded-[10px] border border-line bg-cream px-4 text-[15px] text-muted"
+        className="min-h-[52px] rounded-[10px] border border-line bg-cream px-4 text-[15px] tracking-[-0.2px] text-muted"
       />
-      <Text className="mb-2.5 mt-6 text-[13px] text-ink">Username</Text>
+      <Text className="mb-1.5 mt-4 text-[13px] leading-4 tracking-[-0.15px] text-ink">Username</Text>
       <TextInput
         accessibilityLabel="Username"
         value={username}
         onChangeText={setUsername}
         editable={ready && !busy}
         maxLength={80}
-        className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] text-ink"
+        className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] tracking-[-0.2px] text-ink"
       />
-      <Text className="mb-2.5 mt-6 text-[13px] text-ink">Full name</Text>
+      <Text className="mb-1.5 mt-4 text-[13px] leading-4 tracking-[-0.15px] text-ink">Full name</Text>
       <TextInput
         accessibilityLabel="Full name"
         value={fullName}
@@ -140,12 +142,12 @@ export default function Account({
         editable={ready && !busy}
         autoComplete="name"
         maxLength={80}
-        className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] text-ink"
+        className="min-h-[52px] rounded-[10px] border border-line bg-paper px-4 text-[15px] tracking-[-0.2px] text-ink"
       />
       {error ? (
         <Text
           accessibilityRole="alert"
-          className="my-3 text-[13px] leading-5 text-rust"
+          className="my-3 text-[13px] leading-[18px] tracking-[-0.15px] text-rust"
         >
           {error}
         </Text>
@@ -153,23 +155,19 @@ export default function Account({
       {notice ? (
         <Text
           accessibilityLiveRegion="polite"
-          className="mt-3.5 text-[13px] leading-5 text-muted"
+          className="mt-3 text-[13px] leading-[18px] tracking-[-0.15px] text-muted"
         >
           {notice}
         </Text>
       ) : null}
-      {loading ? (
-        <Text className="mt-3.5 text-[13px] leading-5 text-muted">
-          Loading profile…
-        </Text>
-      ) : ready ? (
+      {ready ? (
         <Button
           title={busy ? "Please wait…" : "Save profile"}
           disabled={busy}
           onPress={() => {
             void save();
           }}
-          className="mt-5"
+          className="mt-4"
         />
       ) : (
         <Button
@@ -177,9 +175,10 @@ export default function Account({
           secondary
           disabled={busy}
           onPress={() => setAttempt((value) => value + 1)}
-          className="mt-5"
+          className="mt-4"
         />
       )}
+      </>}
       <Button
         title="Sign out"
         secondary
@@ -187,7 +186,7 @@ export default function Account({
         onPress={() => {
           void signOut();
         }}
-        className="mt-5"
+        className="mt-4"
       />
     </View>
   );

@@ -1,19 +1,21 @@
+import { LoadingSkeleton } from '../components/loading-skeleton';
 import '../../global.css';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import { StudioProvider, useStudio } from '../context/studio';
 import { colors } from '../components/ui';
+import { AppToast } from '../components/app-toast';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Every screen that needs an account. Signed-out visitors only reach welcome and auth.
 const appScreens = [
-  'index', 'create', 'family', 'explore', 'library', 'account', 'marketplace', 'recorder', 'share', 'item/[id]', 'story/[id]', 'read-along',
+  'index', 'create', 'family', 'explore', 'library', 'account', 'community', 'recorder', 'share', 'item/[id]', 'story/[id]',
 ] as const;
 
 function Loading() {
-  return <View className="flex-1 items-center justify-center bg-paper"><ActivityIndicator color={colors.cocoa} /></View>;
+  return <View className="flex-1 bg-paper px-6 pt-16"><LoadingSkeleton variant="screen" label="Loading TedTime" className="w-full max-w-[700px] self-center" /></View>;
 }
 
 function AppStack() {
@@ -43,9 +45,8 @@ function AppStack() {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    'Tedfont-Regular': require('../../assets/fonts/Tedfont-Regular.ttf'),
-    Icons: require('../../assets/fonts/Icons.ttf')
+    'Tedfont2-Regular': require('../../assets/fonts/Tedfont2-Regular.ttf'),
   });
   if (!loaded && !error) return <Loading />;
-  return <GestureHandlerRootView><StudioProvider><StatusBar style="dark" /><AppStack /></StudioProvider></GestureHandlerRootView>;
+  return <GestureHandlerRootView><StudioProvider><StatusBar style="dark" /><AppStack /><AppToast /></StudioProvider></GestureHandlerRootView>;
 }

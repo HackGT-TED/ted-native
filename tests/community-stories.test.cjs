@@ -7,7 +7,7 @@ const row = (id, extra = {}) => ({ id, title: `Story ${id}`, description: 'A tal
 function setup({ list, sign, authLoading = false } = {}) {
   const hooks = harness();
   const calls = { filters: [], signed: [] };
-  const module = load('src/hooks/use-marketplace-stories.ts', {
+  const module = load('src/hooks/use-community-stories.ts', {
     react: hooks.react,
     '../lib/supabase': { supabase: {
       from(table) {
@@ -21,13 +21,13 @@ function setup({ list, sign, authLoading = false } = {}) {
     } },
   });
   const h = { calls, authLoading,
-    render() { h.result = hooks.render(() => module.useMarketplaceStories(h.authLoading)); return h.result; },
+    render() { h.result = hooks.render(() => module.useCommunityStories(h.authLoading)); return h.result; },
     async flush() { await tick(); h.render(); },
   };
   h.render(); return h;
 }
 
-test('only published marketplace stories are requested and mapped for tiles', async () => {
+test('only published community stories are requested and mapped for tiles', async () => {
   const h = setup({ list: async () => ({ data: [row('a'), row('b', { description: null, cover_image_path: 'u/b/cover.jpg' })], error: null }) });
   await h.flush();
   assert.deepEqual(h.calls.filters, [['marketplace_visible', true], ['visibility', 'published']]);
@@ -45,7 +45,7 @@ test('a cover that cannot be signed falls back to the placeholder', async () => 
   assert.equal(h.result.error, '');
 });
 
-test('the marketplace loads for everyone once the session is known', async () => {
+test('the community loads for everyone once the session is known', async () => {
   const h = setup({ authLoading: true }); await h.flush();
   assert.deepEqual(h.calls.filters, [], 'waits while the session is restored');
   h.authLoading = false; h.render(); await h.flush();

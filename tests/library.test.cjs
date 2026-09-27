@@ -14,6 +14,7 @@ function setup(items) {
     'react-native': Object.fromEntries(['ActivityIndicator', 'FlatList', 'Pressable', 'Text', 'View'].map(n => [n, n])),
     '../components/shell': { Shell: 'Shell' }, '../components/creation-card': { CreationCard: 'CreationCard' },
     '../components/audio-story-grid': { AudioStoryGrid: 'AudioStoryGrid' },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading' },
     '../context/studio': { useStudio: () => studio }, '../hooks/use-story-draft': {},
     '../hooks/use-library-tab': { useLibraryTab: (_tabs, fallback) => {
@@ -23,7 +24,7 @@ function setup(items) {
   });
   const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(nodes)
     : [node, ...nodes(node.props?.children)];
-  const h = {
+  const h = { studio,
     render() { h.list = hooks.render(module.default).props.children.props; return h; },
     ids() { return Array.from(h.list.data, item => item.id); },
     tab(title) { return nodes(h.list.ListHeaderComponent).find(n => n.props?.accessibilityRole === 'tab' && n.props.accessibilityLabel.startsWith(title)).props; },
@@ -32,7 +33,7 @@ function setup(items) {
   return h.render();
 }
 
-const story = (id, status, marketplace, updated) => ({ id, creation_session_id: id, title: id, status, marketplace, updated_at: updated });
+const story = (id, status, community, updated) => ({ id, creation_session_id: id, title: id, status, community, updated_at: updated });
 const mixed = () => setup([
   story('draft', 'draft', false, '2026-09-25T00:00:00Z'),
   story('public', 'published', true, '2026-09-26T00:00:00Z'),
@@ -61,7 +62,7 @@ test('an empty tab explains itself, and only Drafts offers to create a story', (
   assert.doesNotMatch(empty, /Create a story/);
   h.select('Private');
   assert.match(JSON.stringify(h.list.ListEmptyComponent), /No private stories yet/);
-  assert.match(JSON.stringify(h.list.ListHeaderComponent), /Published, but not in the marketplace/);
+  assert.match(JSON.stringify(h.list.ListHeaderComponent), /Published, but not in the community/);
 });
 
 test('saved stories stay below the list on every tab', () => {
@@ -69,4 +70,20 @@ test('saved stories stay below the list on every tab', () => {
   const [savedAudio, bookmarks] = h.list.ListFooterComponent.props.children;
   assert.equal(savedAudio.props.children[2].props.stories[0].id, 'saved-audio');
   assert.equal(bookmarks.props.children[1][0].props.item.id, 'bookmark');
+});
+
+test('initial library loads show placeholders for both owned and saved stories', () => {
+  const h = setup([]);
+  h.studio.timeline.projects = [];
+  h.studio.stories.loading = true;
+  h.studio.savedStories = { items: [], loading: true, refresh() {} };
+  h.render();
+  assert.equal(h.list.ListEmptyComponent.type, 'LoadingSkeleton');
+  assert.equal(h.list.refreshing, false, 'initial load uses skeletons without a second spinner');
+  assert.match(JSON.stringify(h.list.ListFooterComponent), /Loading saved stories/);
+  h.studio.stories.loading = false;
+  h.studio.savedStories.loading = false;
+  h.render();
+  assert.match(JSON.stringify(h.list.ListEmptyComponent), /No drafts yet/);
+  assert.doesNotMatch(JSON.stringify(h.list.ListFooterComponent), /LoadingSkeleton/);
 });

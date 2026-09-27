@@ -20,6 +20,7 @@ function setup(file, client, props = {}) {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: 'Fragment' },
     'react-native': Object.fromEntries(['Pressable', 'Text', 'TextInput', 'View'].map(key => [key, key])),
     '../lib/supabase': { supabase: client },
+    './loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     './ui': { Body: 'Body', Button: 'Button', colors: {}, fieldStyles: {} },
   };
   const exports = {};

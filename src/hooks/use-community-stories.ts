@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-export type MarketplaceStory = {
+export type CommunityStory = {
   id: string;
   /** The account that recorded it; a user's own stories are not saveable. */
   authorId: string;
@@ -16,15 +16,15 @@ export type MarketplaceStory = {
   durationMs: number | null;
 };
 
-export type MarketplaceRow = {
+export type CommunityRow = {
   id: string; author_id: string; title: string; description: string | null;
   published_at: string | null; cover_image_path: string | null; stereo_audio_path: string | null;
   duration_ms: number | null;
 };
 
-export const marketplaceFields = 'id,author_id,title,description,published_at,cover_image_path,stereo_audio_path,duration_ms';
+export const communityFields = 'id,author_id,title,description,published_at,cover_image_path,stereo_audio_path,duration_ms';
 
-export function toMarketplaceStory(row: MarketplaceRow, covers: Map<string, string>): MarketplaceStory {
+export function toCommunityStory(row: CommunityRow, covers: Map<string, string>): CommunityStory {
   return {
     id: row.id,
     authorId: row.author_id,
@@ -38,8 +38,8 @@ export function toMarketplaceStory(row: MarketplaceRow, covers: Map<string, stri
 }
 
 /** Published stories everyone can see (marketplace_visible), newest first. Signed in or not. */
-export function useMarketplaceStories(authLoading: boolean) {
-  const [state, setState] = useState<{ items: MarketplaceStory[]; loading: boolean; error: string }>({
+export function useCommunityStories(authLoading: boolean) {
+  const [state, setState] = useState<{ items: CommunityStory[]; loading: boolean; error: string }>({
     items: [], loading: false, error: '',
   });
   const generation = useRef(0);
@@ -51,14 +51,14 @@ export function useMarketplaceStories(authLoading: boolean) {
     setState(current => ({ ...current, loading: true, error: '' }));
     try {
       if (!supabase) throw new Error('Account storage is unavailable.');
-      const { data, error } = await supabase.from('all_stories').select(marketplaceFields)
+      const { data, error } = await supabase.from('all_stories').select(communityFields)
         .eq('marketplace_visible', true).eq('visibility', 'published')
         .order('published_at', { ascending: false }).order('id').limit(100);
       if (error) throw error;
-      const rows = (data ?? []) as MarketplaceRow[];
+      const rows = (data ?? []) as CommunityRow[];
       const covers = await signCovers(rows.map(row => row.cover_image_path).filter((path): path is string => Boolean(path)));
       if (request !== generation.current) return;
-      setState({ loading: false, error: '', items: rows.map(row => toMarketplaceStory(row, covers)) });
+      setState({ loading: false, error: '', items: rows.map(row => toCommunityStory(row, covers)) });
     } catch {
       if (request === generation.current) {
         setState(current => ({ ...current, loading: false, error: 'Could not load audio stories. Please retry.' }));
@@ -77,9 +77,9 @@ export function useMarketplaceStories(authLoading: boolean) {
   return { ...state, refresh };
 }
 
-/** One story by id: any marketplace story, or one of the signed-in user's own. */
-export function useMarketplaceStory(id: string | undefined, authLoading: boolean) {
-  const [state, setState] = useState<{ story: MarketplaceStory | null; loading: boolean; error: string }>({
+/** One story by id: any community story, or one of the signed-in user's own. */
+export function useCommunityStory(id: string | undefined, authLoading: boolean) {
+  const [state, setState] = useState<{ story: CommunityStory | null; loading: boolean; error: string }>({
     story: null, loading: true, error: '',
   });
   const generation = useRef(0);
@@ -94,12 +94,12 @@ export function useMarketplaceStory(id: string | undefined, authLoading: boolean
     setState(current => ({ ...current, loading: true, error: '' }));
     try {
       if (!supabase) throw new Error('Account storage is unavailable.');
-      const { data, error } = await supabase.from('all_stories').select(marketplaceFields).eq('id', id).maybeSingle();
+      const { data, error } = await supabase.from('all_stories').select(communityFields).eq('id', id).maybeSingle();
       if (error) throw error;
-      const row = data as MarketplaceRow | null;
+      const row = data as CommunityRow | null;
       const covers = row?.cover_image_path ? await signCovers([row.cover_image_path]) : new Map<string, string>();
       if (request === generation.current) {
-        setState({ story: row ? toMarketplaceStory(row, covers) : null, loading: false, error: '' });
+        setState({ story: row ? toCommunityStory(row, covers) : null, loading: false, error: '' });
       }
     } catch {
       if (request === generation.current) {

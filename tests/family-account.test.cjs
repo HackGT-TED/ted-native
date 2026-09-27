@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { load, harness, tick } = require('./hook-harness.cjs');
+const { load, harness, tick, deferred } = require('./hook-harness.cjs');
 
 const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(nodes)
@@ -19,6 +19,7 @@ test('Family lists stories sent to you and refreshes each visit', () => {
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'Text', View: 'View' },
     '../components/shell': { Shell: 'Shell' }, '../components/inbox-list': { InboxList: 'InboxList' },
     '../components/family-card': { FamilyCard: 'FamilyCard' },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading' },
     '../context/studio': { useStudio: () => ({ inbox: { items, unheard: 1, loading: false, error: '', refresh: async () => { refreshed++; } },
       family: { refresh: async () => { refreshed++; } } }) },
@@ -38,6 +39,7 @@ test('Family explains itself when nothing has been sent', () => {
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'Text', View: 'View' },
     '../components/shell': { Shell: 'Shell' }, '../components/inbox-list': { InboxList: 'InboxList' },
     '../components/family-card': { FamilyCard: 'FamilyCard' },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading' },
     '../context/studio': { useStudio: () => ({ inbox: { items: [], unheard: 0, loading: false, error: '', refresh: async () => {} },
       family: { refresh: async () => {} } }) },
@@ -51,6 +53,7 @@ function accountPage(openBluetoothSettings) {
     react: hooks.react, 'react/jsx-runtime': jsx,
     'react-native': { Text: 'Text', View: 'View' },
     '../components/shell': { Shell: 'Shell' }, '../components/Account': { default: 'AccountForm', __esModule: true },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
     '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading', Icon: 'Icon' },
     '../context/studio': { useStudio: () => ({ session: { user: { id: 'u1', email: 'rose@example.com' } }, name: 'Rose' }) },
     '../services/bluetooth-settings': { openBluetoothSettings },
@@ -80,7 +83,7 @@ test('Account explains what to do when settings cannot open', async () => {
   assert.match(JSON.stringify(h.tree), /choose “TedTime Bear”/);
 });
 
-function shell(unheard) {
+function shell(unheard, props = {}) {
   const hooks = harness();
   const calls = [];
   const module = load('src/components/shell.tsx', {
@@ -93,15 +96,55 @@ function shell(unheard) {
     'react-native-reanimated': { __esModule: true, default: { View: 'AnimatedView' },
       useAnimatedStyle: fn => fn(), useSharedValue: v => ({ value: v }), withTiming: v => v },
   });
-  const tree = hooks.render(() => module.Shell({ children: null }));
+  const tree = hooks.render(() => module.Shell({ children: null, ...props }));
   return { calls, tabs: nodes(tree).filter(n => n.props?.accessibilityRole === 'tab'), all: nodes(tree) };
 }
 
 test('the bottom bar has Family in the middle and no Bear tab', () => {
   const { tabs } = shell(0);
   const titles = tabs.map(tab => nodes(tab).find(n => n.type === 'Text').props.children);
-  // 'Read' is the temporary read-along test tab; remove it here when the tab goes.
-  assert.deepEqual(titles, ['Home', 'Create', 'Family', 'Explore', 'Library', 'Read']);
+  assert.deepEqual(titles, ['Home', 'Create', 'Family', 'Explore', 'Library']);
+});
+
+test('Family pull-to-refresh waits for members and stories, prevents duplicate pulls, and resets after errors', async () => {
+  const hooks = harness();
+  const members = deferred();
+  const stories = deferred();
+  let familyReads = 0;
+  let inboxReads = 0;
+  const studio = {
+    family: { refresh: () => { familyReads++; return members.promise; } },
+    inbox: { items: [], unheard: 0, loading: false, error: '', refresh: () => { inboxReads++; return stories.promise; } },
+  };
+  const module = load('src/app/family.tsx', {
+    react: hooks.react, 'react/jsx-runtime': jsx,
+    'expo-router': { useFocusEffect: () => {} },
+    'react-native': { RefreshControl: 'RefreshControl', Text: 'Text', View: 'View' },
+    '../components/shell': { Shell: 'Shell' }, '../components/inbox-list': { InboxList: 'InboxList' },
+    '../components/family-card': { FamilyCard: 'FamilyCard' },
+    '../components/loading-skeleton': { LoadingSkeleton: 'LoadingSkeleton' },
+    '../components/ui': { Body: 'Body', Button: 'Button', colors: {}, Heading: 'Heading' },
+    '../context/studio': { useStudio: () => studio },
+  });
+  const control = () => hooks.render(module.default).props.refreshControl;
+  assert.equal(control().props.refreshing, false);
+  const pending = control().props.onRefresh();
+  assert.equal(control().props.refreshing, true);
+  await control().props.onRefresh();
+  assert.equal(familyReads, 1);
+  assert.equal(inboxReads, 1);
+  members.resolve(); await tick();
+  assert.equal(control().props.refreshing, true, 'stories are still loading');
+  stories.resolve(Promise.reject(new Error('offline')));
+  await pending;
+  assert.equal(control().props.refreshing, false);
+  await control().props.onRefresh();
+  assert.equal(familyReads, 2, 'another pull can retry');
+
+  const refreshControl = control();
+  const scroll = shell(0, { refreshControl }).all.find(n => n.type === 'ScrollView');
+  assert.equal(scroll.props.refreshControl, refreshControl);
+  assert.equal(scroll.props.alwaysBounceVertical, true, 'short pages can also be pulled');
 });
 
 test('Family shows a red dot while stories are waiting, and Account opens its page', () => {

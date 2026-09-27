@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const { load, harness, tick, deferred } = require('./hook-harness.cjs');
 
 function setup() {
-  const hooks = harness(); const calls = []; const published = [];
+  const hooks = harness(); const calls = []; const published = []; const toasts = [];
   const studio = {
     session: { user: { id: 'alice' } }, authLoading: false, storyId: 'my-story',
     draft: { name: 'My story', loading: false, editable: true },
@@ -16,6 +16,7 @@ function setup() {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     'expo-router': { router: { push: route => calls.push(route) } },
     'react-native': { Switch: 'Switch', Text: 'Text', View: 'View' },
+    'react-native-toast-message': { show: options => toasts.push(options) },
     './ui': { Button: 'Button', colors: {} }, '../context/studio': { useStudio: () => studio },
     '../services/story-api': { warmUp: async () => {} },
     './story-recipients': { StoryRecipients: 'StoryRecipients' },
@@ -28,7 +29,7 @@ function setup() {
     } },
   });
   const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
-  const h = { studio, calls, published, publishError: null, sendError: null,
+  const h = { studio, calls, published, toasts, publishError: null, sendError: null,
     render(disabled = false) { h.tree = hooks.render(() => module.StoryActions({ disabled })); return h; },
     toggle() { return nodes(h.tree).find(n => n.type === 'Switch').props; },
     recipients() { return nodes(h.tree).find(n => n.type === 'StoryRecipients')?.props; },
@@ -42,9 +43,12 @@ function setup() {
 test('Save and Publish use the current story and report confirmed success', async () => {
   const h = setup(); h.button('Save').onPress(); await h.flush();
   assert.deepEqual(h.calls[0].slice(0, 4), ['my-story', 'My story', false, ['moment-1']]);
-  assert.match(h.messages(), /saved to your account/);
+  assert.equal(h.toasts.length, 1);
+  assert.equal(h.toasts[0].text1, 'Creation saved');
+  assert.match(h.toasts[0].text2, /saved to your account/);
   h.button('Publish').onPress(); await h.flush();
   assert.equal(h.calls[1][2], true); assert.match(h.messages(), /Story published/);
+  assert.equal(h.toasts.length, 1);
 });
 
 test('Publish sends the moments to the backend first and saves its audio, description and tags', async () => {
@@ -83,32 +87,34 @@ test('repeated taps only save once and errors preserve the draft for retry', asy
   h.studio.stories.save = async () => { h.calls.push('save'); await pending.promise; throw new Error('Offline. Retry.'); };
   h.render(); h.button('Save').onPress(); h.button('Publish').onPress();
   assert.equal(h.calls.length, 1);
+  assert.equal(h.toasts.length, 0, 'pending saves must not show success');
   pending.resolve(); await h.flush(); assert.match(h.messages(), /Offline/); assert.equal(h.studio.draft.name, 'My story');
+  assert.equal(h.toasts.length, 0, 'failed saves must not show success');
   h.studio.storyId = 'different-story'; h.render(); assert.doesNotMatch(h.messages(), /Offline/);
 });
 
-test('the marketplace switch defaults off and is sent only with Publish', async () => {
+test('the community switch defaults off and is sent only with Publish', async () => {
   const h = setup();
   assert.equal(h.toggle().value, false);
-  assert.equal(h.toggle().accessibilityLabel, 'Publish to Marketplace for all to see!');
+  assert.equal(h.toggle().accessibilityLabel, 'Publish to Community for all to see!');
   h.button('Publish').onPress(); await h.flush();
-  assert.equal(h.calls[0][4].marketplace, false);
+  assert.equal(h.calls[0][4].community, false);
   assert.match(h.messages(), /Find it in your library/);
   h.toggle().onValueChange(true); h.render();
   assert.equal(h.toggle().value, true);
   h.button('Save').onPress(); await h.flush();
-  assert.equal(h.calls[1][2], false); assert.equal(h.calls[1][4].marketplace, undefined, 'Save must not change marketplace visibility');
+  assert.equal(h.calls[1][2], false); assert.equal(h.calls[1][4].community, undefined, 'Save must not change community visibility');
   h.button('Publish').onPress(); await h.flush();
-  assert.equal(h.calls[2][4].marketplace, true);
-  assert.match(h.messages(), /published to the marketplace/);
+  assert.equal(h.calls[2][4].community, true);
+  assert.match(h.messages(), /published to the community/);
 });
 
 test('the switch starts from how the story was last published and resets per story', () => {
   const h = setup();
-  h.studio.stories.items = [{ creation_session_id: 'my-story', status: 'published', marketplace: true }];
+  h.studio.stories.items = [{ creation_session_id: 'my-story', status: 'published', community: true }];
   h.render();
   assert.equal(h.toggle().value, true);
-  assert.match(h.messages(), /Published to the marketplace/);
+  assert.match(h.messages(), /Published to the community/);
   h.toggle().onValueChange(false); h.render();
   assert.equal(h.toggle().value, false);
   h.studio.storyId = 'another-story'; h.render();

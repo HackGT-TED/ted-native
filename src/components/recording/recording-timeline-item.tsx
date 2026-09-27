@@ -1,5 +1,6 @@
+import { LoadingSkeleton } from '../loading-skeleton';
 import { memo, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { colors, Icon } from '../ui';
 import type { RecordingSegment } from '../../types/recording';
@@ -41,7 +42,7 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
         <TextInput accessibilityLabel="Segment name" value={name} onChangeText={setName}
           autoFocus maxLength={80} editable={!disabled} placeholder="Name this moment"
           placeholderTextColor={colors.muted} returnKeyType="done" onSubmitEditing={save}
-          className="min-h-12 rounded-[10px] border border-line bg-paper px-3 text-[17px] font-semibold text-ink" />
+          className="min-h-12 rounded-[10px] border border-line bg-paper px-3 text-[17px] font-semibold tracking-[-0.2px] text-ink" />
         <View className="flex-row justify-end gap-2">
           <Pressable accessibilityRole="button" onPress={() => setMode('view')} className="min-h-11 justify-center px-3">
             <Text className="text-[13px] text-muted">Cancel</Text>
@@ -98,7 +99,7 @@ export const RecordingTimelineItem = memo(function RecordingTimelineItem({ recor
         <Pressable accessibilityRole="button" accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${recording.title}`}
           disabled={disabled} accessibilityState={{ busy: loading, disabled }} onPress={() => onPlay(recording)}
           className="h-11 w-11 items-center justify-center rounded-full bg-paper active:opacity-50">
-          {loading ? <ActivityIndicator color={colors.cocoa} /> : <Icon name={playing ? 'pause' : 'play'} color={colors.cocoa} />}
+          {loading ? <LoadingSkeleton variant="inline" label="Loading audio" /> : <Icon name={playing ? 'pause' : 'play'} color={colors.cocoa} />}
         </Pressable>
         <View accessibilityRole="progressbar" accessibilityLabel="Playback progress"
           accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
