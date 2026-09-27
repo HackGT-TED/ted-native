@@ -4,6 +4,8 @@
 
 Open **My Bear** to find and connect a StoryBear, see its reported battery/readiness, and send a test vibration. This requires an Expo development build on a physical phone. See [StoryBear setup and firmware contract](docs/storybear.md) for build commands, placeholder UUIDs, protocol frames, the shared service API, and hardware validation steps. Bear controls and Bluetooth speaker audio are separate connections; audio still uses the existing player and the phone's audio controls.
 
+After connection, My Bear shows a Spotify-style story player with cover art, a story picker, play/pause, stop, previous/next moments, fifteen-second skips, and a seekable whole-story timeline. Recorded moments play in order. Tap the device row for bear settings or the queue icon for individual moments. Playback stops on leaving the screen, backgrounding, changing stories/accounts, recording, or disconnecting. This player uses Expo Audio and does not send audio or automatic haptic events over BLE.
+
 ## Styling
 
 All screens and UI components use Tailwind utility classes through NativeWind 4. The palette and icon font are defined in `tailwind.config.js`. Metro uses `inlineRem: 16` so spacing utilities match the original numeric dimensions on native and web.

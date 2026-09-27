@@ -28,6 +28,11 @@ const glyphs = {
   trash: "\ue872",
   stop: "\ue047",
   drag: "\ue25d",
+  previous: "\ue045",
+  next: "\ue044",
+  queue: "\ue03d",
+  devices: "\ue1b1",
+  down: "\ue313",
 };
 export function Icon({
   name,

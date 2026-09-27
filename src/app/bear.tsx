@@ -4,12 +4,13 @@ import { ActivityIndicator, Linking, Platform, Text, View } from 'react-native';
 import { Shell } from '../components/shell';
 import { Body, Button, colors, Label } from '../components/ui';
 import { StoryBearIllustration } from '../components/story-bear-illustration';
+import { StoryBearPlayer } from '../components/story-bear-player';
 import { useStoryBear } from '../context/story-bear';
 import { storyBearDisplayName } from '../services/bluetooth/storyBearProtocol';
 
 export default function MyBear() {
-  const { storyBear, state, availability, bears, connectedBear, lastBearId, battery, ready,
-    busy, sendingCommand, hasSearched, message, commandMessage } = useStoryBear();
+  const { storyBear, state, availability, bears, connectedBear, lastBearId,
+    busy, hasSearched, message } = useStoryBear();
   const [settingsError, setSettingsError] = useState<string | null>(null);
   useFocusEffect(useCallback(() => () => { void storyBear.stopStoryBearScan(); }, [storyBear]));
   const connected = Boolean(connectedBear);
@@ -31,6 +32,8 @@ export default function MyBear() {
     try { await Linking.openSettings(); }
     catch { setSettingsError('Open your phone’s settings to allow Bluetooth access, then return here.'); }
   };
+
+  if (connected) return <Shell><StoryBearPlayer /></Shell>;
 
   return <Shell>
     <View className="w-full max-w-[440px] self-center items-center pb-8 pt-8">
@@ -61,25 +64,6 @@ export default function MyBear() {
           </View>
           <Button title="Connect" disabled={busy || bear.isConnectable === false} onPress={() => { void storyBear.connectToStoryBear(bear.id); }} />
         </View>)}
-      </View>}
-
-      {connected && <View className="mt-6 w-full">
-        <View className="rounded-[20px] border border-line bg-cream p-6">
-          <Text className="text-center text-[22px] font-medium text-ink">{storyBearDisplayName(connectedBear?.name)}</Text>
-          <Text accessibilityLiveRegion="polite" className="mt-2 text-center text-[13px] text-cocoa">● {state === 'disconnecting' ? 'Disconnecting' : 'Bear controls connected'}</Text>
-          <View className="mt-6 gap-4 border-t border-line pt-5">
-            <View className="flex-row justify-between gap-4"><Body>Battery</Body><Text className="text-[14px] font-medium text-ink">{battery === null ? 'Not reported yet' : `${battery}%`}</Text></View>
-            <View className="flex-row justify-between gap-4"><Body>Interactions</Body><Text className="text-[14px] font-medium text-ink">{ready ? 'On' : 'Waiting for bear'}</Text></View>
-          </View>
-        </View>
-        <Button className="mt-5" title={sendingCommand ? 'Sending a little buzz…' : 'Test Vibration'} disabled={busy || sendingCommand} onPress={() => { void storyBear.testHaptic(); }} />
-        {commandMessage && <Text accessibilityLiveRegion="polite" className="mt-3 text-center text-[13px] leading-5 text-muted">{commandMessage}</Text>}
-        <Button className="mt-3" title="Disconnect Bear" secondary disabled={busy} onPress={() => { void storyBear.disconnectStoryBear(); }} />
-        <View className="mt-7 border-t border-line pt-5">
-          <Label>AUDIO OUTPUT</Label>
-          <Body className="mt-2 !text-[13px]">StoryBear also works as your Bluetooth audio output. If audio is playing through your phone, select StoryBear from your device’s Bluetooth/audio controls.</Body>
-          <Body className="mt-2 !text-[13px]">Bear controls and audio connect separately. Your phone chooses where stories play.</Body>
-        </View>
       </View>}
 
       {scanning && <Button className="mt-5 w-full" title="Cancel" secondary onPress={() => { void storyBear.stopStoryBearScan(); }} />}

@@ -2,6 +2,19 @@
 
 Open **My Bear** from the app navigation. Find My Bear runs a ten-second service-filtered search; choose Connect when your bear appears. Multiple bears can be selected individually. The service validates the discovered service and characteristic capabilities before displaying a connection, subscribes to status notifications, and exposes Test Vibration. Battery and readiness remain unknown until reported by the device. There is no automatic reconnect loop: after losing a connection, find and connect again. The last successful ID is stored locally and labelled when rediscovered.
 
+## Connected story player
+
+Once connected, My Bear opens a Spotify-style Now Playing layout using TedTime's artwork and warm palette. Choose an existing recorded story from the library sheet. The player uses the story's current recorded moments in timeline order, including local drafts; it does not generate narration or use the published snapshot.
+
+- Play/Pause preserves position. Stop cancels loading and returns to the beginning of the story.
+- Drag or tap the seek bar to move anywhere in the complete story, even across moment boundaries. Elapsed/remaining time reflects native progress, with native durations used as each recording loads. Screen readers can adjust in fifteen-second increments; web users can also use arrow keys, Home and End.
+- Previous/Next move between recorded moments; Previous restarts the current moment when more than three seconds in. The ±15 controls skip through the full story. The timeline sheet lists every moment and can jump directly to one.
+- Finished moments advance automatically. At the end, playback stops and Play restarts the story. Moment transitions may have a brief loading gap; this is sequential playback of separate files, not a rendered gapless audio file.
+- A story/account change, app backgrounding, screen exit, recording, or bear disconnect stops playback and cancels pending loads. Returning does not autoplay. Playback currently stays scoped to My Bear; no background/lock-screen playback was added.
+- The bear/device row opens battery, interaction status, Test Vibration and Disconnect controls. Audio uses the phone's selected output and is never sent through BLE. No automatic timeline haptic commands are sent.
+
+`StoryPlayback` (`src/services/story-playback.ts`) owns at most one native player and isolates each source's events. `use-story-playback.ts` connects it to Expo Audio and screen/app lifecycle. Local recordings fall back to private signed storage URLs. Source loading and seeks have timeouts; stale loads, seeks and finish events cannot restart stopped playback. `story-bear-player.tsx` and `playback-seek-bar.tsx` provide the player, library picker and accessible timeline. Regression tests are in `tests/story-playback.test.cjs`.
+
 ## Development build
 
 Installed with `npx expo install`: `react-native-ble-manager` 12.5.3 and `expo-dev-client` ~57.0.19. The lockfile records exact versions. This project uses Expo SDK 57, React Native 0.86 and the new architecture. Use a physical iOS or Android phone and an Expo development build; Expo Go cannot load the Bluetooth native module. Web displays a friendly phone-app message when connection is requested.
